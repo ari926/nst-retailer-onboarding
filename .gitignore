@@ -1,0 +1,50 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Production builds
+dist
+dist-ssr
+build
+
+# Env files — NEVER commit these
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.tsbuildinfo
+
+# Testing
+coverage
+.nyc_output
+test-results
+playwright-report
+playwright/.cache
+
+# Supabase
+supabase/.branches
+supabase/.temp
+
+# JWT keys
+*.pem
+private.pem
+public.pem

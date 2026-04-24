@@ -1,0 +1,47 @@
+/* Typography — hierarchy via weight and size only */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+h1, h2, h3, h4 {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: var(--lh-tight);
+}
+
+h1 {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semibold);
+}
+
+h3 {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+}
+
+h4 {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+
+p {
+  line-height: var(--lh-normal);
+  max-width: 65ch;
+}
+
+.text-muted { color: var(--text-muted); }
+.text-secondary { color: var(--text-secondary); }
+.text-error { color: var(--color-error); }
+.text-success { color: var(--color-success); }
+
+.text-xs { font-size: var(--fs-xs); }
+.text-sm { font-size: var(--fs-sm); }
+.text-lg { font-size: var(--fs-lg); }
+
+.mono { font-family: var(--font-mono); }
