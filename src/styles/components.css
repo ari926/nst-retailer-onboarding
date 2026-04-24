@@ -1,0 +1,322 @@
+/* =============================================================================
+ * Component primitives — fresh Nexus-style CSS for NST
+ * =============================================================================
+ * Utility classes used across the app. Everything scoped via .nst-* prefix
+ * where collisions might matter. Keep this file under 500 lines.
+ * ===========================================================================*/
+
+/* ----------------------------- LAYOUT ----------------------------- */
+
+.container {
+  width: 100%;
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+.container-wide {
+  max-width: var(--max-wide);
+}
+
+.stack { display: flex; flex-direction: column; }
+.stack-xs { gap: var(--space-2); }
+.stack-sm { gap: var(--space-3); }
+.stack-md { gap: var(--space-4); }
+.stack-lg { gap: var(--space-6); }
+.stack-xl { gap: var(--space-8); }
+
+.row { display: flex; flex-direction: row; align-items: center; }
+.row-sm { gap: var(--space-2); }
+.row-md { gap: var(--space-4); }
+.row-lg { gap: var(--space-6); }
+.row-between { justify-content: space-between; }
+.row-end { justify-content: flex-end; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+
+@media (max-width: 640px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ----------------------------- BUTTONS ----------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+  white-space: nowrap;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--nst-teal);
+  color: var(--text-on-teal);
+  border: 1px solid var(--nst-teal);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--nst-teal-hover);
+  color: var(--text-on-teal);
+  text-decoration: none;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--nst-dark);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--neutral-100);
+  color: var(--nst-dark);
+  text-decoration: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  min-height: 36px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--neutral-100);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.btn-block { width: 100%; }
+
+.btn-lg {
+  min-height: 52px;
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--fs-lg);
+}
+
+/* ----------------------------- FORMS ----------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.field-required::after {
+  content: '*';
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+.field-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.field-error {
+  font-size: var(--fs-sm);
+  color: var(--color-error);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.input,
+.textarea,
+.select {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+  min-height: 44px;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--nst-teal);
+  box-shadow: var(--shadow-focus);
+}
+
+.input:disabled {
+  background: var(--neutral-100);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+.textarea { min-height: 96px; resize: vertical; }
+
+/* Checkbox + radio */
+.checkbox, .radio {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--dur-fast);
+}
+
+.checkbox { border-radius: var(--radius-sm); }
+.radio { border-radius: var(--radius-full); }
+
+.checkbox:checked,
+.radio:checked {
+  background: var(--nst-teal);
+  border-color: var(--nst-teal);
+}
+
+.checkbox:checked::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 10px;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: translate(6px, 2px) rotate(45deg);
+}
+
+.radio:checked::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(4px, 4px);
+}
+
+.checkbox:focus-visible,
+.radio:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+/* ----------------------------- CARDS ----------------------------- */
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.card-lg { padding: var(--space-8); }
+
+.card-title {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.card-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+/* ----------------------------- BADGES ----------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  height: 24px;
+}
+
+.badge-success { background: var(--color-success-bg); color: var(--color-success); }
+.badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge-error   { background: var(--color-error-bg); color: var(--color-error); }
+.badge-info    { background: var(--color-info-bg); color: var(--color-info); }
+.badge-neutral { background: var(--neutral-200); color: var(--text-secondary); }
+
+/* ----------------------------- BANNERS / ALERTS ----------------------------- */
+
+.banner {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.banner-info    { background: var(--color-info-bg); border-color: #B4D7E8; color: var(--color-info); }
+.banner-warning { background: var(--color-warning-bg); border-color: #E8C5AD; color: var(--color-warning); }
+.banner-error   { background: var(--color-error-bg); border-color: #E8B4BE; color: var(--color-error); }
+.banner-success { background: var(--color-success-bg); border-color: #BCD9A8; color: var(--color-success); }
+
+/* ----------------------------- UTILITIES ----------------------------- */
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border-default);
+  border: none;
+  margin: var(--space-6) 0;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--neutral-200);
+  border-top-color: var(--nst-teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

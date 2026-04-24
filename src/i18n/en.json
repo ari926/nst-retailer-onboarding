@@ -1,0 +1,299 @@
+{
+  "_meta": {
+    "locale": "en",
+    "description": "English source strings for NST Retailer Onboarding V1. Used with next-intl. Source of truth — keep es.json keys in sync.",
+    "voice_notes": "Friendly-professional, second-person ('you'). Short sentences. Avoid jargon. Never say 'bank' unless referring to the retailer's own bank account — this is all NST brand."
+  },
+
+  "global": {
+    "header": {
+      "store_label": "Store",
+      "progress": "Step {current} of {total} — {percent}% to launch",
+      "save_later": "Save and finish later",
+      "support_chip": "Message our team",
+      "language_toggle": {
+        "en": "EN",
+        "es": "ES"
+      }
+    },
+    "locked_banner": "Your account is in setup mode. You'll get full portal access as soon as you finish these steps and your launch date is confirmed.",
+    "sidebar": {
+      "status_done": "Done",
+      "status_current": "In progress",
+      "status_locked": "Finish the previous step first"
+    },
+    "buttons": {
+      "continue": "Continue",
+      "save_and_continue": "Save and continue",
+      "back": "Back",
+      "submit": "Submit",
+      "cancel": "Cancel"
+    },
+    "validation": {
+      "required": "This field is required",
+      "email_invalid": "Enter a valid email address",
+      "phone_invalid": "Enter a valid phone number",
+      "address_invalid": "We couldn't verify this address. Please double-check it.",
+      "password_weak": "Password must be at least 12 characters with an uppercase letter, a number, and a symbol"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "network": "We couldn't connect. Check your internet connection.",
+      "session_expired": "Your session expired. Please sign in again."
+    }
+  },
+
+  "step_0_claim": {
+    "title": "Welcome to NST, {firstName}.",
+    "subtitle": "Your agreement is signed. Let's get your store set up.",
+    "fields": {
+      "email_label": "Email address",
+      "temp_code_label": "Temporary code",
+      "new_password_label": "New password",
+      "confirm_password_label": "Confirm password",
+      "mfa_label": "Two-step verification method",
+      "mfa_sms": "Text message (SMS)",
+      "mfa_totp": "Authenticator app"
+    },
+    "submit": "Claim my account"
+  },
+
+  "step_1_profile": {
+    "title": "Tell us about your store.",
+    "subtitle": "This is what we print on manifests and what our drivers use to find you.",
+    "fields": {
+      "legal_name": "Legal entity name",
+      "storefront_name": "Storefront name (DBA)",
+      "street": "Street address",
+      "suite": "Suite / unit",
+      "city": "City",
+      "state": "State",
+      "zip": "ZIP code",
+      "hours_title": "Operating hours",
+      "hours_open": "Open",
+      "hours_close": "Close",
+      "hours_closed": "Closed",
+      "days": {
+        "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
+        "fri": "Fri", "sat": "Sat", "sun": "Sun"
+      },
+      "access_notes": "Notes for the driver (loading door, buzzer, entry code, parking)",
+      "primary_contact_section": "Primary store contact",
+      "boh_section": "Back-of-house manager (optional)",
+      "contact_name": "Name",
+      "contact_email": "Email",
+      "contact_phone": "Mobile phone"
+    }
+  },
+
+  "step_2_safe": {
+    "title": "Tell us about your safe.",
+    "subtitle": "So our drivers know what to expect on site and who to ask for the key.",
+    "fields": {
+      "has_smart_safe_question": "Do you have a Smart Safe on site?",
+      "yes": "Yes",
+      "no": "No",
+      "storage_method_question": "How is cash stored between pickups?",
+      "storage_options": {
+        "under_counter": "Under-counter safe",
+        "drop_safe": "Drop safe",
+        "vault": "Vault",
+        "other": "Other"
+      },
+      "safe_make": "Safe make",
+      "safe_model": "Model",
+      "safe_serial": "Serial number",
+      "safe_serial_photo": "Photo of the serial plate (optional, reduces typos)",
+      "dashboard_question": "How does your safe dashboard connect?",
+      "dashboard_options": {
+        "direct": "Direct to NST",
+        "carrier": "Through our current carrier",
+        "unsure": "Not sure"
+      },
+      "key_holder_section": "Who holds the keys",
+      "key_holder_name": "Name",
+      "key_holder_role": "Role / title",
+      "key_holder_location": "Where the key is kept",
+      "add_key_holder": "Add another key holder",
+      "provisional_credit_question": "Provisional credit?",
+      "provisional_options": {
+        "already_set": "Yes, already set up",
+        "want_to_set": "Yes, I want to set it up",
+        "no": "No"
+      }
+    }
+  },
+
+  "step_3_banking": {
+    "title": "Confirm your banking details.",
+    "subtitle": "We pulled these from the cash info form you signed. Review them before we connect everything.",
+    "fields": {
+      "bank_name": "Bank name",
+      "account_last4": "Last 4 of account number",
+      "routing_number": "Routing number",
+      "signer_name": "Signer name",
+      "match_checkbox": "These match my records",
+      "flag_button": "Flag for NST to update",
+      "mismatch_notes": "Tell us what's wrong"
+    },
+    "ocr_fail_banner": "We couldn't read your form automatically. Please type the details from your signed cash info form."
+  },
+
+  "step_4_deposit": {
+    "title": "Let's walk through a deposit.",
+    "subtitle": "Before your first real pickup, our driver needs you to enter a deposit in the Cash Services Portal. Let's walk through the same form here so you know exactly what to do on day one. This is a sample — nothing is submitted live.",
+    "instructions_lead": "Use these values for the sample:",
+    "fields": {
+      "amount": "Deposit amount",
+      "amount_hint": "Use $100.00",
+      "date": "Deposit date",
+      "bag_number": "Sealed bag number",
+      "bag_number_hint": "Use TEST-{retailerId}",
+      "copy_button": "Copy",
+      "denominations_title": "Denomination breakdown",
+      "denominations_hint": "Use 5 × $20 bills = $100",
+      "denom_count": "Count",
+      "notes": "Notes (optional)",
+      "total_label": "Calculated total"
+    },
+    "math_error": "Your breakdown adds up to {calculated} but the deposit total is {stated}. Fix one of them.",
+    "submit": "Submit sample",
+    "success": "Got it. That's exactly how you'll do it before every pickup."
+  },
+
+  "step_5_change_order": {
+    "title": "Now a change order.",
+    "subtitle": "Same idea — let's walk through a change order. You'll use this when you need coin rolls or small bills.",
+    "instructions_lead": "Use these values for the sample:",
+    "fields": {
+      "delivery_date": "Delivery date",
+      "delivery_date_hint": "Pick any date at least 2 business days from today",
+      "denominations_title": "Denominations requested",
+      "denominations_hint": "Use $50 in quarters ($50.00 total)",
+      "delivery_notes": "Delivery notes (optional)",
+      "total_label": "Calculated total"
+    },
+    "date_error": "Delivery date must be at least 2 business days from today.",
+    "submit": "Submit sample",
+    "success": "Got it. That's how you'll request change from now on."
+  },
+
+  "step_6_invoicing": {
+    "title": "Where should we send your invoices?",
+    "subtitle": "NST invoices weekly. Confirm the billing contact and we'll send a sample right now so you know what to expect.",
+    "fields": {
+      "contact_name": "Billing contact name",
+      "contact_email": "Billing email",
+      "send_sample_checkbox": "Email me a sample invoice now",
+      "cadence_label": "Frequency: Weekly"
+    },
+    "submit": "Confirm and send sample",
+    "sent_message": "Sample invoice on the way to {email}.",
+    "ack_button": "I got the sample",
+    "bounce_error": "Your email bounced. Please update the address and try again."
+  },
+
+  "step_7_launch": {
+    "title": "When do you want your first pickup?",
+    "subtitle": "We need a minimum 10 calendar-day window to schedule your first pickup. The earliest date below is {earliestDate}.",
+    "fields": {
+      "preferred_date": "Preferred first pickup date",
+      "not_sure_yet": "I'm not sure yet — I'll confirm later",
+      "not_sure_subcopy": "No problem. We'll check in every 2 weeks. You can come back here anytime to lock it in.",
+      "service_days": "Ongoing service days",
+      "time_window": "Time window",
+      "time_options": {
+        "am": "Morning",
+        "pm": "Afternoon",
+        "flexible": "Flexible"
+      },
+      "frequency": "Frequency",
+      "access_notes": "Notes for the driver"
+    },
+    "date_too_soon_error": "Your first pickup must be at least 10 calendar days from today ({earliestDate} or later).",
+    "tooltip_disabled_date": "We need at least 10 calendar days to schedule your first pickup.",
+    "submit_with_date": "Request launch",
+    "submit_deferred": "Save — I'll confirm the date later",
+    "success_with_date": "Request submitted. Your NST rep will confirm within one business day. We'll email {email} as soon as it's locked in.",
+    "success_deferred": "Saved. We'll email you every 2 weeks. When you're ready, open the link in any of those emails to pick your date."
+  },
+
+  "activation": {
+    "title": "You're live, {storeName}.",
+    "subtitle": "First pickup: {date}. We'll email you when the driver is on the way.",
+    "reminder_cards": {
+      "before_pickup": {
+        "title": "Before each pickup",
+        "body": "Enter your deposit in the portal, seal the bag, band your cash."
+      },
+      "need_change": {
+        "title": "Need change?",
+        "body": "Submit a change order at least 2 business days ahead."
+      },
+      "something_off": {
+        "title": "Something off?",
+        "body": "Message us at {supportNumber}."
+      }
+    },
+    "buttons": {
+      "dashboard": "Go to my dashboard",
+      "contract": "Download my signed contract",
+      "replay": "Replay any training video"
+    }
+  },
+
+  "waiting_page": {
+    "with_date": {
+      "title": "Waiting on launch-date confirmation",
+      "body": "Your NST rep will confirm {requestedDate} within one business day. We'll email {email} as soon as it's locked in."
+    },
+    "deferred": {
+      "title": "Waiting for you to pick your launch date",
+      "body": "We'll check in every 2 weeks. When you're ready, come back here to pick your date.",
+      "cta": "Pick my date now"
+    }
+  },
+
+  "video_sidecar": {
+    "drawer_title": "Need help?",
+    "tabs": {
+      "deposits": "How deposits work (45s)",
+      "change_orders": "How change orders work (60s)",
+      "banding": "How to band cash (90s)",
+      "invoicing": "How to read your invoice (60s)"
+    },
+    "full_library": "See full training library"
+  },
+
+  "stuck_detection": {
+    "banner_48h": "Stuck? Reply to your welcome email or text us at {supportNumber} and we'll help.",
+    "support_chat_opened": "We opened the support chat for you."
+  },
+
+  "emails": {
+    "kickoff": {
+      "subject": "You're almost done setting up with NST — 6 quick steps left",
+      "body": "Hi {firstName},\n\nYour NST service agreement is signed and filed. Thank you.\n\nTo finish setting up your account, please complete the steps below. It takes about 15 minutes and is fully self-serve. You'll enter your store details, confirm your safe and bank info, walk through a sample deposit and change order, and pick your first pickup date.\n\nOne important thing: we need a minimum 10 calendar-day window to schedule your first pickup, so the earliest date you'll see on the calendar is {earliestDate}.\n\n[Finish my setup →]\n\nIf you need to hand this off to someone else in the store, forward this email — the link works for whoever opens it first.\n\nQuestions? Reply to this email or text us at {supportNumber}.\n\n— The NST team"
+    },
+    "reminder_day2": {
+      "subject": "Still need to finish your NST setup",
+      "body": "Hi {firstName},\n\nQuick reminder — your NST setup is waiting on you. About 15 minutes.\n\n[Finish my setup →]\n\n— The NST team"
+    },
+    "reminder_day5": {
+      "subject": "Your NST setup is still open",
+      "body": "Hi {firstName},\n\nYour NST onboarding is still pending. Let us know if you need help — reply here or text us at {supportNumber}.\n\n[Finish my setup →]\n\n— The NST team"
+    },
+    "pick_your_date": {
+      "subject": "Ready to pick your first pickup date with NST?",
+      "body": "Hi {firstName},\n\nQuick check-in — do you have a date locked in for your first NST pickup yet?\n\nRemember we need a minimum 10 calendar-day window, so the earliest date is {earliestDate}.\n\n[Pick my launch date →]\n\nWe'll check in again in two weeks. No rush.\n\n— The NST team"
+    },
+    "pick_your_date_final": {
+      "subject": "Last reminder — let's lock in your NST launch date",
+      "body": "Hi {firstName},\n\nThis is our sixth reminder about your NST launch date. We won't keep emailing — your rep will call you soon.\n\nIf you'd rather pick it yourself, the link is still live:\n\n[Pick my launch date →]\n\n— The NST team"
+    },
+    "launched": {
+      "subject": "You're live with NST",
+      "body": "Hi {firstName},\n\nYou're officially live. Your first pickup is {firstPickupDate} between {timeWindow}.\n\nYour driver will arrive at {address}.\n\nBefore then, three quick reminders:\n- Before each pickup: enter your deposit in the portal, seal the bag, band your cash.\n- Need change? Submit a request at least 2 business days ahead.\n- Something off? Text us at {supportNumber}.\n\n— The NST team"
+    }
+  }
+}

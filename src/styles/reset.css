@@ -1,0 +1,69 @@
+/* Modern CSS reset — minimal, focused on what a product app needs */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body, h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd {
+  margin: 0;
+}
+
+ul[role='list'], ol[role='list'] {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  line-height: var(--lh-normal);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+  background: var(--bg-page);
+}
+
+img, picture, svg, video {
+  display: block;
+  max-width: 100%;
+}
+
+input, button, textarea, select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+a {
+  color: var(--nst-teal);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--nst-teal-hover);
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--nst-teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* tabular-nums for any numeric values */
+.num, input[type='number'], time {
+  font-variant-numeric: tabular-nums lining-nums;
+}
