@@ -1,17 +1,59 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Download, CheckCircle2 } from 'lucide-react';
+import { Download, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { STEPS } from '../types/onboarding';
 import { generateHandoffPdf } from '../lib/handoffPdf';
+import { getSyncStatus, type SfSyncSummary } from '../lib/salesforceService';
 
 /**
  * /onboarding landing — routes user to their current step.
  * When all 7 steps are complete, shows the activation panel with a
  * "Download ops summary" CTA (the PDF handoff from PR #10).
  */
+function SyncIndicator({ sync }: { sync: SfSyncSummary }) {
+  const { t } = useTranslation();
+  if (sync.hasFailures) {
+    return (
+      <div className="sync-indicator sync-indicator--error" role="status">
+        <AlertTriangle size={16} />
+        <span>
+          {t(
+            'onboarding.sync.failed',
+            "Some steps didn't reach our ops system. Your NST rep will reach out shortly.",
+          )}
+        </span>
+      </div>
+    );
+  }
+  if (sync.allSynced) {
+    return (
+      <div className="sync-indicator sync-indicator--ok" role="status">
+        <CheckCircle2 size={16} />
+        <span>
+          {t(
+            'onboarding.sync.synced',
+            'Synced with NST operations. Your rep has everything they need.',
+          )}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="sync-indicator sync-indicator--pending" role="status">
+      <Loader2 size={16} className="spin" />
+      <span>
+        {t(
+          'onboarding.sync.pending',
+          'Syncing with NST operations…',
+        )}
+      </span>
+    </div>
+  );
+}
+
 export default function OnboardingIndex() {
   const { t } = useTranslation();
   const currentStep = useOnboardingStore((s) => s.currentStep);
@@ -24,6 +66,34 @@ export default function OnboardingIndex() {
   // real flow steps (1..7) rather than array length.
   const allDone = STEPS.every((s) => completedSteps.includes(s.id));
   const [downloading, setDownloading] = useState(false);
+  const [sync, setSync] = useState<SfSyncSummary | null>(null);
+
+  // Poll sync status every 3s while on the activation panel. Stops once all
+  // rows are succeeded or any have failed.
+  useEffect(() => {
+    if (!allDone) return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const s = await getSyncStatus(sfdcAccountId);
+        if (!cancelled) setSync(s);
+      } catch {
+        // Non-fatal — UI falls back to neutral state.
+      }
+    };
+    void tick();
+    const handle = setInterval(() => {
+      if (sync?.allSynced || sync?.hasFailures) {
+        clearInterval(handle);
+        return;
+      }
+      void tick();
+    }, 3_000);
+    return () => {
+      cancelled = true;
+      clearInterval(handle);
+    };
+  }, [allDone, sfdcAccountId, sync?.allSynced, sync?.hasFailures]);
 
   const handleDownload = () => {
     setDownloading(true);
@@ -92,6 +162,10 @@ export default function OnboardingIndex() {
                 </p>
               </div>
             </div>
+
+            {/* Salesforce sync indicator */}
+            {sync && <SyncIndicator sync={sync} />}
+
             <div
               className="row row-sm"
               style={{ justifyContent: 'flex-end', gap: 'var(--sp-3)' }}

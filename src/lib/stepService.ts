@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { recordMockSync } from './salesforceService';
 import type { StepId } from '../types/onboarding';
 
 /**
@@ -70,6 +71,10 @@ export async function submitStep<T>(stepId: StepId, payload: T): Promise<void> {
       payload,
       submitted_at: new Date().toISOString(),
     }));
+    // Simulate the async Salesforce sync happening in the background.
+    // Real mode: the DB trigger enqueues sf_sync_queue and the Edge Function
+    // drains it. Mock mode stamps success immediately for demo continuity.
+    recordMockSync(stepId);
     return;
   }
 

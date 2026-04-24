@@ -630,3 +630,40 @@
   color: #fff;
   border-color: var(--color-primary, #1f8f77);
 }
+
+/* Salesforce sync indicator (PR #11) */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+  margin-top: var(--space-3, 0.75rem);
+}
+.sync-indicator svg {
+  flex-shrink: 0;
+}
+.sync-indicator--pending {
+  background: color-mix(in srgb, #6b7280 8%, transparent);
+  border-color: color-mix(in srgb, #6b7280 20%, transparent);
+  color: var(--color-text-muted, #4b5563);
+}
+.sync-indicator--ok {
+  background: color-mix(in srgb, #2f9e44 10%, transparent);
+  border-color: color-mix(in srgb, #2f9e44 30%, transparent);
+  color: color-mix(in srgb, #1b5e20 85%, black 15%);
+}
+.sync-indicator--error {
+  background: color-mix(in srgb, #c92a2a 10%, transparent);
+  border-color: color-mix(in srgb, #c92a2a 30%, transparent);
+  color: color-mix(in srgb, #8a1818 88%, black 12%);
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 1s linear infinite;
+}

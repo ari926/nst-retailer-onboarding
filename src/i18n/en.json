@@ -68,6 +68,11 @@
       "download_cta": "Download ops summary",
       "downloading": "Preparing PDF…",
       "downloaded": "Downloaded {filename}"
+    },
+    "sync": {
+      "pending": "Syncing with NST operations…",
+      "synced": "Synced with NST operations. Your rep has everything they need.",
+      "failed": "Some steps didn't reach our ops system. Your NST rep will reach out shortly."
     }
   },
 
