@@ -1,23 +1,41 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
+import Login from './pages/Login';
+import Claim from './pages/Claim';
 import OnboardingIndex from './pages/OnboardingIndex';
 import StepPlaceholder from './pages/StepPlaceholder';
 import { AppLayout } from './components/layout/AppLayout';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 /**
  * App router.
- *   /                                  → public home (later: auth gate)
- *   /onboarding                        → overview / "next up" card
- *   /onboarding/profile…launch         → step forms
  *
- * Every /onboarding/* route is wrapped in AppLayout (header + sidebar).
+ *   Public:
+ *     /                 → marketing landing
+ *     /login            → returning user sign-in
+ *     /claim            → Step 0: new retailer claims account
+ *
+ *   Protected (require auth):
+ *     /onboarding       → overview / "next up"
+ *     /onboarding/*     → step forms (placeholders until PR #4-#9)
  */
 export default function App() {
   return (
     <Routes>
+      {/* Public */}
       <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/claim" element={<Claim />} />
 
-      <Route path="/onboarding" element={<AppLayout />}>
+      {/* Protected */}
+      <Route
+        path="/onboarding"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<OnboardingIndex />} />
         <Route
           path="profile"

@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import { Logo } from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { ProgressBar } from './ProgressBar';
 import { useOnboardingStore } from '../../stores/onboardingStore';
+import { signOut } from '../../hooks/useAuth';
 
 /**
  * Top bar for onboarding flow.
@@ -12,7 +15,15 @@ import { useOnboardingStore } from '../../stores/onboardingStore';
  */
 export function Header() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const storefrontName = useOnboardingStore((s) => s.storefrontName);
+  const reset = useOnboardingStore((s) => s.reset);
+
+  const handleSignOut = async () => {
+    await signOut();
+    reset();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header className="app-header">
@@ -43,6 +54,15 @@ export function Header() {
           {t('global.header.support_chip')}
         </button>
         <LanguageToggle />
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={handleSignOut}
+          aria-label={t('global.header.sign_out', 'Sign out')}
+          title={t('global.header.sign_out', 'Sign out')}
+        >
+          <LogOut size={16} aria-hidden="true" />
+        </button>
       </div>
     </header>
   );

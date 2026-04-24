@@ -37,7 +37,7 @@ export default function Home() {
             <button type="button" className="btn btn-primary" disabled>
               {t('home.claim_cta', 'Claim your account')}
             </button>
-            <a href="/onboarding" className="btn btn-secondary">
+            <a href="/claim" className="btn btn-secondary">
               {t('home.preview_cta', 'Preview the flow')}
             </a>
             <button type="button" className="btn btn-ghost" onClick={toggleLang}>

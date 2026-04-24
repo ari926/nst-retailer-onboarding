@@ -11,6 +11,7 @@
       "progress": "Paso {current} de {total} — {percent}% hasta la activación",
       "save_later": "Guardar y continuar después",
       "support_chip": "Escríbele a nuestro equipo",
+      "sign_out": "Cerrar sesión",
       "language_toggle": {
         "en": "EN",
         "es": "ES"
@@ -69,8 +70,18 @@
     "preview_cta": "Ver el flujo"
   },
 
+  "login": {
+    "title": "Inicia sesión",
+    "subtitle": "¿Nuevo en NST? Usa el enlace del correo de bienvenida para activar tu cuenta.",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "submit": "Iniciar sesión",
+    "new_account": "¿Cuenta nueva? Actívala aquí"
+  },
+
   "step_0_claim": {
     "title": "Bienvenido a NST, {firstName}.",
+    "title_no_name": "Bienvenido a NST.",
     "subtitle": "Tu acuerdo está firmado. Vamos a configurar la tienda.",
     "fields": {
       "email_label": "Correo electrónico",
