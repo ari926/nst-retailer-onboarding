@@ -18,7 +18,13 @@ i18n
     },
     fallbackLng: 'en',
     supportedLngs: ['en', 'es'],
-    interpolation: { escapeValue: false },
+    interpolation: {
+      escapeValue: false,
+      // Translation files use ICU-ish single-brace placeholders (e.g. {current}).
+      // Override i18next's default {{var}} syntax to match.
+      prefix: '{',
+      suffix: '}',
+    },
     detection: {
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: 'nst_lang',

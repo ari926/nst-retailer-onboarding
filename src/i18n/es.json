@@ -43,6 +43,32 @@
     }
   },
 
+  "nav": {
+    "step_of": "Paso {current} de {total}",
+    "step_1_short": "Perfil de tienda",
+    "step_2_short": "Caja fuerte y llaves",
+    "step_3_short": "Datos bancarios",
+    "step_4_short": "Depósito de prueba",
+    "step_5_short": "Pedido de cambio de prueba",
+    "step_6_short": "Facturación",
+    "step_7_short": "Primera recolección"
+  },
+
+  "onboarding": {
+    "overview_eyebrow": "Resumen de configuración",
+    "welcome_title": "Vamos a configurar tu tienda.",
+    "welcome_subtitle": "Siete pasos rápidos. Puedes guardar y volver cuando quieras.",
+    "all_done_title": "Listo — ya puedes lanzar.",
+    "all_done_subtitle": "Nuestro equipo de operaciones confirmará tu fecha de lanzamiento pronto.",
+    "next_up": "Siguiente"
+  },
+
+  "home": {
+    "subtitle": "Tu configuración empieza aquí. Activa tu cuenta para empezar.",
+    "claim_cta": "Activar mi cuenta",
+    "preview_cta": "Ver el flujo"
+  },
+
   "step_0_claim": {
     "title": "Bienvenido a NST, {firstName}.",
     "subtitle": "Tu acuerdo está firmado. Vamos a configurar la tienda.",

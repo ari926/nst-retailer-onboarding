@@ -46,6 +46,7 @@
   --text-primary: var(--neutral-800);
   --text-secondary: var(--neutral-600);
   --text-muted: var(--neutral-500);
+  --text-faint: var(--neutral-400);
   --text-on-dark: #F5F4EF;
   --text-on-teal: #FFFFFF;
 
@@ -105,6 +106,7 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-fast: 150ms;
   --dur-med: 250ms;
+  --dur-normal: 250ms;
   --dur-slow: 400ms;
 
   /* --- Layout --- */
