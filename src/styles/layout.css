@@ -285,6 +285,45 @@
   gap: var(--space-3);
 }
 
+/* ----------------------------- HOURS GRID ----------------------------- */
+
+.hours-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--bg-surface-alt);
+}
+
+.hours-row {
+  display: grid;
+  grid-template-columns: 60px 110px 1fr 1fr;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.hours-row__day {
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+}
+
+.hours-row__closed {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.hours-row__time { margin: 0; }
+
+@media (max-width: 640px) {
+  .hours-row {
+    grid-template-columns: 56px 1fr 1fr;
+  }
+  .hours-row__closed { grid-column: 1 / -1; }
+}
+
 /* ----------------------------- RESPONSIVE ----------------------------- */
 
 @media (max-width: 960px) {
