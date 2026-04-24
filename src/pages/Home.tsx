@@ -1,15 +1,25 @@
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { trackEvent } from '../lib/analytics';
 
 /**
- * Home — minimal landing for PR #1 scaffold.
- * Will be replaced in PR #3 by auth gate → redirect to /onboarding.
+ * Home — public landing page.
+ * Sends retailers to /claim to enter their invite code, or into the flow
+ * via /onboarding if they're already authenticated.
  */
 export default function Home() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
 
   const toggleLang = () => {
     const next = i18n.language.startsWith('es') ? 'en' : 'es';
     i18n.changeLanguage(next);
+    trackEvent('home.language_toggled', { to: next });
+  };
+
+  const handleClaim = () => {
+    trackEvent('home.claim_clicked', { lang: i18n.language });
+    navigate('/claim');
   };
 
   return (
@@ -17,24 +27,30 @@ export default function Home() {
       <div className="container" style={{ maxWidth: '640px' }}>
         <header className="stack stack-sm" style={{ marginBottom: 'var(--space-8)' }}>
           <div className="text-muted text-sm">National Secure Transport</div>
-          <h1>NST Retailer Onboarding</h1>
+          <h1>{t('home.title', 'NST Retailer Onboarding')}</h1>
           <p className="text-muted">
-            {t('home.subtitle', 'Your self-serve setup starts here. Claim your account to begin.')}
+            {t(
+              'home.subtitle',
+              'Your self-serve setup starts here. Claim your account to begin — most retailers finish in about 20 minutes.'
+            )}
           </p>
         </header>
 
         <div className="card stack stack-md">
           <div className="stack stack-xs">
-            <div className="text-xs text-muted" style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              PR #1 scaffold
+            <div className="text-sm">
+              {t(
+                'home.body',
+                "We'll confirm your storefront details, collect banking info, and schedule your first pickup. You can save and come back anytime."
+              )}
             </div>
-            <p className="text-sm text-muted">
-              This is the repo scaffold only. Auth, layout, and step screens land in PR #2 and #3.
-            </p>
+            <div className="text-xs text-muted">
+              {t('home.secure_note', 'All inputs are encrypted at rest. NST never stores full safe combinations.')}
+            </div>
           </div>
 
           <div className="row row-sm">
-            <button type="button" className="btn btn-primary" disabled>
+            <button type="button" className="btn btn-primary" onClick={handleClaim}>
               {t('home.claim_cta', 'Claim your account')}
             </button>
             <a href="/claim" className="btn btn-secondary">

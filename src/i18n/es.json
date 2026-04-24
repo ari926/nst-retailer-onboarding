@@ -77,7 +77,10 @@
   },
 
   "home": {
-    "subtitle": "Tu configuración empieza aquí. Activa tu cuenta para empezar.",
+    "title": "Incorporación de comerciantes NST",
+    "subtitle": "Tu configuración empieza aquí. Activa tu cuenta para empezar — la mayoría de comerciantes termina en unos 20 minutos.",
+    "body": "Vamos a confirmar los datos de tu tienda, obtener tu información bancaria y agendar tu primera recolección. Puedes guardar y volver cuando quieras.",
+    "secure_note": "Toda la información se cifra en reposo. NST nunca guarda las combinaciones completas de la caja fuerte.",
     "claim_cta": "Activar mi cuenta",
     "preview_cta": "Ver el flujo"
   },
@@ -185,7 +188,8 @@
       "flag_button": "Marcar para que NST lo actualice",
       "mismatch_notes": "Cuéntanos qué está mal"
     },
-    "ocr_fail_banner": "No pudimos leer tu formulario automáticamente. Por favor escribe los datos de tu formulario de información de efectivo firmado."
+    "ocr_fail_banner": "No pudimos leer tu formulario automáticamente. Por favor escribe los datos de tu formulario de información de efectivo firmado.",
+    "security_note": "Los datos bancarios se cifran en reposo con AWS KMS y solo te mostramos los últimos 4 dígitos. Los números completos son de solo lectura para el equipo de operaciones de NST."
   },
 
   "step_4_deposit": {

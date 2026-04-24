@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { recordMockSync } from './salesforceService';
+import { trackEvent } from './analytics';
 import type { StepId } from '../types/onboarding';
 
 /**
@@ -66,6 +67,8 @@ export async function loadDraft<T>(stepId: StepId): Promise<T | null> {
 }
 
 export async function submitStep<T>(stepId: StepId, payload: T): Promise<void> {
+  trackEvent('step.submitted', { stepId });
+
   if (MOCK_AUTH_ENABLED) {
     localStorage.setItem(mockKey(stepId, 'submission'), JSON.stringify({
       payload,
