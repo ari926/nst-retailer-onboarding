@@ -545,3 +545,46 @@
   padding: 2px 8px;
   gap: 4px;
 }
+
+/* Step 6 — invoicing layout */
+.field-row {
+  display: grid;
+  gap: var(--space-4, 1rem);
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Reusable callout — used for inline info/error/success banners */
+.callout {
+  display: flex;
+  gap: var(--space-3, 0.75rem);
+  align-items: flex-start;
+  padding: var(--space-4, 1rem);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface, #fafafa);
+  color: var(--color-text, #111);
+}
+.callout > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.callout__sub {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #555);
+}
+.callout--success {
+  background: color-mix(in srgb, #2f9e44 14%, transparent);
+  border-color: color-mix(in srgb, #2f9e44 35%, transparent);
+  color: color-mix(in srgb, #1b5e20 85%, black 15%);
+}
+.callout--error {
+  background: color-mix(in srgb, #c92a2a 10%, transparent);
+  border-color: color-mix(in srgb, #c92a2a 35%, transparent);
+  color: color-mix(in srgb, #8a1818 88%, black 12%);
+}
