@@ -11,6 +11,7 @@
       "progress": "Step {current} of {total} — {percent}% to launch",
       "save_later": "Save and finish later",
       "support_chip": "Message our team",
+      "sign_out": "Sign out",
       "language_toggle": {
         "en": "EN",
         "es": "ES"
@@ -69,8 +70,18 @@
     "preview_cta": "Preview the flow"
   },
 
+  "login": {
+    "title": "Sign in",
+    "subtitle": "New to NST? Use the link in your welcome email to claim your account.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "new_account": "New account? Claim it here"
+  },
+
   "step_0_claim": {
     "title": "Welcome to NST, {firstName}.",
+    "title_no_name": "Welcome to NST.",
     "subtitle": "Your agreement is signed. Let's get your store set up.",
     "fields": {
       "email_label": "Email address",

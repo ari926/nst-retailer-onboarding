@@ -14,6 +14,7 @@
     "types:supabase": "supabase gen types typescript --project-id rqmtikbgkplxmmchyujo > src/types/database.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-query": "^5.97.0",
     "@tanstack/react-table": "^8.21.3",
