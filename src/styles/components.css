@@ -588,3 +588,45 @@
   border-color: color-mix(in srgb, #c92a2a 35%, transparent);
   color: color-mix(in srgb, #8a1818 88%, black 12%);
 }
+
+/* Step 7 — pickup scheduling */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+.radio-option__sub {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #6b7280);
+}
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+.chip {
+  appearance: none;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #111);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.chip:hover {
+  border-color: var(--color-text-muted, #888);
+}
+.chip:focus-visible {
+  outline: 2px solid var(--color-primary, #1f8f77);
+  outline-offset: 2px;
+}
+.chip--active {
+  background: var(--color-primary, #1f8f77);
+  color: #fff;
+  border-color: var(--color-primary, #1f8f77);
+}
