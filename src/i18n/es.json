@@ -61,7 +61,14 @@
     "welcome_subtitle": "Siete pasos rápidos. Puedes guardar y volver cuando quieras.",
     "all_done_title": "Listo — ya puedes lanzar.",
     "all_done_subtitle": "Nuestro equipo de operaciones confirmará tu fecha de lanzamiento pronto.",
-    "next_up": "Siguiente"
+    "next_up": "Siguiente",
+    "handoff": {
+      "ready_title": "Los 7 pasos enviados",
+      "ready_sub": "Tu representante de NST está coordinando tu fecha de lanzamiento. Descarga un resumen para tus archivos — es el mismo documento que operaciones usa para configurar tu tienda.",
+      "download_cta": "Descargar resumen de operaciones",
+      "downloading": "Preparando PDF…",
+      "downloaded": "Descargado {filename}"
+    }
   },
 
   "home": {
