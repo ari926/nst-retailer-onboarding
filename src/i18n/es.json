@@ -1,0 +1,299 @@
+{
+  "_meta": {
+    "locale": "es",
+    "description": "Spanish translations for NST Retailer Onboarding V1. Used with next-intl. Keep all keys in sync with en.json. Do not machine-translate future additions — use a native speaker.",
+    "translator_notes": "Uses second-person singular informal 'tú' throughout (consistent with NST's friendly-professional tone). Currency formats use USD with Spanish number formatting. All dates are formatted per retailer locale at render time."
+  },
+
+  "global": {
+    "header": {
+      "store_label": "Tienda",
+      "progress": "Paso {current} de {total} — {percent}% hasta la activación",
+      "save_later": "Guardar y continuar después",
+      "support_chip": "Escríbele a nuestro equipo",
+      "language_toggle": {
+        "en": "EN",
+        "es": "ES"
+      }
+    },
+    "locked_banner": "Tu cuenta está en modo de configuración. Tendrás acceso completo al portal tan pronto como completes todos los pasos y tu fecha de lanzamiento esté confirmada.",
+    "sidebar": {
+      "status_done": "Completado",
+      "status_current": "En progreso",
+      "status_locked": "Completa el paso anterior primero"
+    },
+    "buttons": {
+      "continue": "Continuar",
+      "save_and_continue": "Guardar y continuar",
+      "back": "Atrás",
+      "submit": "Enviar",
+      "cancel": "Cancelar"
+    },
+    "validation": {
+      "required": "Este campo es obligatorio",
+      "email_invalid": "Ingresa un correo electrónico válido",
+      "phone_invalid": "Ingresa un número de teléfono válido",
+      "address_invalid": "No pudimos verificar esta dirección. Revísala por favor.",
+      "password_weak": "La contraseña debe tener al menos 12 caracteres con una mayúscula, un número y un símbolo"
+    },
+    "errors": {
+      "generic": "Algo salió mal. Por favor inténtalo de nuevo.",
+      "network": "No pudimos conectarnos. Revisa tu conexión a internet.",
+      "session_expired": "Tu sesión expiró. Por favor inicia sesión de nuevo."
+    }
+  },
+
+  "step_0_claim": {
+    "title": "Bienvenido a NST, {firstName}.",
+    "subtitle": "Tu acuerdo está firmado. Vamos a configurar la tienda.",
+    "fields": {
+      "email_label": "Correo electrónico",
+      "temp_code_label": "Código temporal",
+      "new_password_label": "Nueva contraseña",
+      "confirm_password_label": "Confirma tu contraseña",
+      "mfa_label": "Método de verificación en dos pasos",
+      "mfa_sms": "Mensaje de texto (SMS)",
+      "mfa_totp": "Aplicación autenticadora"
+    },
+    "submit": "Reclamar mi cuenta"
+  },
+
+  "step_1_profile": {
+    "title": "Cuéntanos sobre tu tienda.",
+    "subtitle": "Esto es lo que imprimimos en los manifiestos y lo que usan nuestros choferes para encontrarte.",
+    "fields": {
+      "legal_name": "Nombre legal de la entidad",
+      "storefront_name": "Nombre de la tienda (DBA)",
+      "street": "Calle y número",
+      "suite": "Suite / unidad",
+      "city": "Ciudad",
+      "state": "Estado",
+      "zip": "Código postal",
+      "hours_title": "Horario de operación",
+      "hours_open": "Abre",
+      "hours_close": "Cierra",
+      "hours_closed": "Cerrado",
+      "days": {
+        "mon": "Lun", "tue": "Mar", "wed": "Mié", "thu": "Jue",
+        "fri": "Vie", "sat": "Sáb", "sun": "Dom"
+      },
+      "access_notes": "Notas para el chofer (puerta de carga, timbre, código de entrada, estacionamiento)",
+      "primary_contact_section": "Contacto principal de la tienda",
+      "boh_section": "Gerente de operaciones (opcional)",
+      "contact_name": "Nombre",
+      "contact_email": "Correo electrónico",
+      "contact_phone": "Teléfono móvil"
+    }
+  },
+
+  "step_2_safe": {
+    "title": "Cuéntanos sobre tu caja fuerte.",
+    "subtitle": "Para que nuestros choferes sepan qué esperar en el sitio y a quién pedirle las llaves.",
+    "fields": {
+      "has_smart_safe_question": "¿Tienes una caja fuerte inteligente (Smart Safe) en el sitio?",
+      "yes": "Sí",
+      "no": "No",
+      "storage_method_question": "¿Cómo se guarda el efectivo entre recolecciones?",
+      "storage_options": {
+        "under_counter": "Caja fuerte bajo el mostrador",
+        "drop_safe": "Caja fuerte con buzón (drop safe)",
+        "vault": "Bóveda",
+        "other": "Otro"
+      },
+      "safe_make": "Marca de la caja fuerte",
+      "safe_model": "Modelo",
+      "safe_serial": "Número de serie",
+      "safe_serial_photo": "Foto de la placa de serie (opcional, reduce errores de tipeo)",
+      "dashboard_question": "¿Cómo se conecta el tablero de la caja?",
+      "dashboard_options": {
+        "direct": "Conecta directamente con NST",
+        "carrier": "A través de nuestro carrier actual",
+        "unsure": "No estoy seguro"
+      },
+      "key_holder_section": "Quién tiene las llaves",
+      "key_holder_name": "Nombre",
+      "key_holder_role": "Rol / puesto",
+      "key_holder_location": "Dónde se guarda la llave",
+      "add_key_holder": "Añadir otra persona con llave",
+      "provisional_credit_question": "¿Crédito provisional?",
+      "provisional_options": {
+        "already_set": "Sí, ya está configurado",
+        "want_to_set": "Sí, quiero configurarlo",
+        "no": "No"
+      }
+    }
+  },
+
+  "step_3_banking": {
+    "title": "Confirma los datos bancarios.",
+    "subtitle": "Extrajimos esta información automáticamente del formulario de información de efectivo que firmaste. Revísala antes de que conectemos todo.",
+    "fields": {
+      "bank_name": "Nombre del banco",
+      "account_last4": "Últimos 4 dígitos de la cuenta",
+      "routing_number": "Número de ruta (routing)",
+      "signer_name": "Nombre del firmante",
+      "match_checkbox": "Estos datos coinciden con mis registros",
+      "flag_button": "Marcar para que NST lo actualice",
+      "mismatch_notes": "Cuéntanos qué está mal"
+    },
+    "ocr_fail_banner": "No pudimos leer tu formulario automáticamente. Por favor escribe los datos de tu formulario de información de efectivo firmado."
+  },
+
+  "step_4_deposit": {
+    "title": "Vamos a revisar un depósito.",
+    "subtitle": "Antes de tu primera recolección real, nuestro chofer necesita que ingreses un depósito en el Portal de Servicios de Efectivo. Vamos a revisar el mismo formulario aquí para que sepas exactamente qué hacer el día uno. Esto es una muestra — nada se envía en vivo.",
+    "instructions_lead": "Usa estos valores para la muestra:",
+    "fields": {
+      "amount": "Monto del depósito",
+      "amount_hint": "Usa $100.00",
+      "date": "Fecha del depósito",
+      "bag_number": "Número de bolsa sellada",
+      "bag_number_hint": "Usa TEST-{retailerId}",
+      "copy_button": "Copiar",
+      "denominations_title": "Desglose por denominación",
+      "denominations_hint": "Usa 5 billetes de $20 = $100",
+      "denom_count": "Cantidad",
+      "notes": "Notas (opcional)",
+      "total_label": "Total calculado"
+    },
+    "math_error": "Tu desglose suma {calculated} pero el total del depósito es {stated}. Corrige uno de los dos.",
+    "submit": "Enviar muestra",
+    "success": "Lo tienes. Así es exactamente como lo harás antes de cada recolección."
+  },
+
+  "step_5_change_order": {
+    "title": "Ahora un pedido de cambio.",
+    "subtitle": "Misma idea — vamos a revisar un pedido de cambio. Vas a usar esto cuando necesites rollos de monedas o billetes pequeños.",
+    "instructions_lead": "Usa estos valores para la muestra:",
+    "fields": {
+      "delivery_date": "Fecha de entrega",
+      "delivery_date_hint": "Elige cualquier fecha al menos 2 días hábiles desde hoy",
+      "denominations_title": "Denominaciones solicitadas",
+      "denominations_hint": "Usa $50 en monedas de 25¢ ($50.00 total)",
+      "delivery_notes": "Notas de entrega (opcional)",
+      "total_label": "Total calculado"
+    },
+    "date_error": "La fecha de entrega debe ser al menos 2 días hábiles desde hoy.",
+    "submit": "Enviar muestra",
+    "success": "Lo tienes. Así es como pedirás cambio de ahora en adelante."
+  },
+
+  "step_6_invoicing": {
+    "title": "¿A dónde te enviamos las facturas?",
+    "subtitle": "NST factura semanalmente. Confirma el contacto de facturación y te enviaremos una muestra ahora para que sepas qué esperar.",
+    "fields": {
+      "contact_name": "Nombre del contacto de facturación",
+      "contact_email": "Correo electrónico de facturación",
+      "send_sample_checkbox": "Envíame una factura de muestra ahora",
+      "cadence_label": "Frecuencia: Semanal"
+    },
+    "submit": "Confirmar y enviar muestra",
+    "sent_message": "Factura de muestra en camino a {email}.",
+    "ack_button": "Ya recibí la muestra",
+    "bounce_error": "Tu correo rebotó. Por favor actualiza la dirección e intenta de nuevo."
+  },
+
+  "step_7_launch": {
+    "title": "¿Cuándo quieres tu primera recolección?",
+    "subtitle": "Necesitamos una ventana mínima de 10 días calendario para programar tu primera recolección. La fecha más próxima abajo es {earliestDate}.",
+    "fields": {
+      "preferred_date": "Fecha preferida para la primera recolección",
+      "not_sure_yet": "No estoy seguro todavía — lo confirmo después",
+      "not_sure_subcopy": "No hay problema. Te escribiremos cada 2 semanas para saber cómo vas. Puedes volver aquí en cualquier momento para fijarla.",
+      "service_days": "Días de servicio continuo",
+      "time_window": "Ventana de tiempo",
+      "time_options": {
+        "am": "Mañana",
+        "pm": "Tarde",
+        "flexible": "Flexible"
+      },
+      "frequency": "Frecuencia",
+      "access_notes": "Notas para el chofer"
+    },
+    "date_too_soon_error": "Tu primera recolección debe ser al menos 10 días calendario desde hoy ({earliestDate} o después).",
+    "tooltip_disabled_date": "Necesitamos al menos 10 días calendario para programar tu primera recolección.",
+    "submit_with_date": "Solicitar lanzamiento",
+    "submit_deferred": "Guardar — confirmo la fecha después",
+    "success_with_date": "Solicitud enviada. Tu representante de NST la confirmará en un día hábil. Te escribiremos a {email} tan pronto como esté fijada.",
+    "success_deferred": "Listo. Te escribiremos cada 2 semanas. Cuando estés listo, abre el enlace en cualquiera de esos correos para elegir tu fecha."
+  },
+
+  "activation": {
+    "title": "Estás en vivo, {storeName}.",
+    "subtitle": "Primera recolección: {date}. Te enviaremos un correo cuando el chofer esté en camino.",
+    "reminder_cards": {
+      "before_pickup": {
+        "title": "Antes de cada recolección",
+        "body": "Ingresa tu depósito en el portal, sella la bolsa, fajilla el efectivo."
+      },
+      "need_change": {
+        "title": "¿Necesitas cambio?",
+        "body": "Envía un pedido de cambio con al menos 2 días hábiles de anticipación."
+      },
+      "something_off": {
+        "title": "¿Algo no está bien?",
+        "body": "Escríbenos al {supportNumber}."
+      }
+    },
+    "buttons": {
+      "dashboard": "Ir a mi tablero",
+      "contract": "Descargar mi contrato firmado",
+      "replay": "Volver a ver cualquier video de capacitación"
+    }
+  },
+
+  "waiting_page": {
+    "with_date": {
+      "title": "Esperando la confirmación de tu fecha de lanzamiento",
+      "body": "Tu representante de NST confirmará {requestedDate} en un día hábil. Te escribiremos a {email} tan pronto como esté fijada."
+    },
+    "deferred": {
+      "title": "Esperando que elijas tu fecha de lanzamiento",
+      "body": "Te escribiremos cada 2 semanas para saber cómo vas. Cuando estés listo, vuelve aquí para elegir tu fecha.",
+      "cta": "Elegir mi fecha ahora"
+    }
+  },
+
+  "video_sidecar": {
+    "drawer_title": "¿Necesitas ayuda?",
+    "tabs": {
+      "deposits": "Cómo funcionan los depósitos (45s)",
+      "change_orders": "Cómo funcionan los pedidos de cambio (60s)",
+      "banding": "Cómo fajillar efectivo (90s)",
+      "invoicing": "Cómo leer tu factura (60s)"
+    },
+    "full_library": "Ver biblioteca de capacitación completa"
+  },
+
+  "stuck_detection": {
+    "banner_48h": "¿Atorado? Responde a tu correo de bienvenida o escríbenos al {supportNumber} y te ayudamos.",
+    "support_chat_opened": "Abrimos el chat de soporte por ti."
+  },
+
+  "emails": {
+    "kickoff": {
+      "subject": "Ya casi terminas de configurar tu cuenta con NST — faltan 6 pasos rápidos",
+      "body": "Hola {firstName},\n\nTu acuerdo de servicio con NST ya está firmado y registrado. Gracias.\n\nPara terminar de configurar tu cuenta, por favor completa los siguientes pasos. Toma unos 15 minutos y es completamente autoservicio. Vas a ingresar los datos de tu tienda, confirmar la información de tu caja fuerte y cuenta bancaria, hacer un depósito y pedido de cambio de muestra, y elegir la fecha de tu primera recolección.\n\nAlgo importante: necesitamos una ventana mínima de 10 días calendario para programar tu primera recolección, así que la fecha más próxima que verás en el calendario es {earliestDate}.\n\n[Terminar mi configuración →]\n\nSi necesitas pasarle esto a alguien más en la tienda, reenvía este correo — el enlace funciona para quien lo abra primero.\n\n¿Preguntas? Responde a este correo o envíanos un mensaje al {supportNumber}.\n\n— El equipo de NST"
+    },
+    "reminder_day2": {
+      "subject": "Aún necesitas completar tu configuración con NST",
+      "body": "Hola {firstName},\n\nUn recordatorio rápido — tu configuración con NST está esperándote. Son unos 15 minutos.\n\n[Terminar mi configuración →]\n\n— El equipo de NST"
+    },
+    "reminder_day5": {
+      "subject": "Tu configuración de NST sigue abierta",
+      "body": "Hola {firstName},\n\nTu incorporación con NST sigue pendiente. Déjanos saber si necesitas ayuda — responde aquí o escríbenos al {supportNumber}.\n\n[Terminar mi configuración →]\n\n— El equipo de NST"
+    },
+    "pick_your_date": {
+      "subject": "¿Ya tienes lista la fecha de tu primera recolección con NST?",
+      "body": "Hola {firstName},\n\nUn check-in rápido — ¿ya tienes una fecha confirmada para tu primera recolección con NST?\n\nRecuerda que necesitamos al menos una ventana de 10 días calendario, así que la fecha más próxima es {earliestDate}.\n\n[Elegir mi fecha de lanzamiento →]\n\nTe escribiremos de nuevo en dos semanas. Sin prisa.\n\n— El equipo de NST"
+    },
+    "pick_your_date_final": {
+      "subject": "Último recordatorio — confirmemos tu fecha de lanzamiento con NST",
+      "body": "Hola {firstName},\n\nEste es nuestro sexto recordatorio sobre tu fecha de lanzamiento con NST. No te vamos a seguir mandando correos — tu representante te llamará pronto.\n\nSi prefieres elegir tú mismo, el enlace sigue activo:\n\n[Elegir mi fecha de lanzamiento →]\n\n— El equipo de NST"
+    },
+    "launched": {
+      "subject": "Estás en vivo con NST",
+      "body": "Hola {firstName},\n\nOficialmente estás en vivo. Tu primera recolección es el {firstPickupDate} entre {timeWindow}.\n\nTu chofer llegará a {address}.\n\nAntes de eso, tres recordatorios rápidos:\n- Antes de cada recolección: ingresa tu depósito en el portal, sella la bolsa, fajilla el efectivo.\n- ¿Necesitas cambio? Envía un pedido con al menos 2 días hábiles de anticipación.\n- ¿Algo no está bien? Escríbenos al {supportNumber}.\n\n— El equipo de NST"
+    }
+  }
+}
