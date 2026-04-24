@@ -252,8 +252,26 @@
 
   "step_7_launch": {
     "title": "¿Cuándo quieres tu primera recolección?",
-    "subtitle": "Necesitamos una ventana mínima de 10 días calendario para programar tu primera recolección. La fecha más próxima abajo es {earliestDate}.",
+    "subtitle": "Necesitamos una ventana mínima de 10 días calendario para programar tu primera recolección.",
+    "earliest_callout": "Primera recolección más próxima: {earliestDate}. Necesitamos 10 días calendario para coordinar la ruta.",
+    "mode_commit": "Ya sé la fecha que quiero",
+    "day_short": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mié",
+      "thu": "Jue",
+      "fri": "Vie",
+      "sat": "Sáb"
+    },
+    "frequencies": {
+      "weekly": "Semanal",
+      "twice_weekly": "Dos veces por semana",
+      "thrice_weekly": "Tres veces por semana",
+      "daily": "Diario (Lun–Vie)",
+      "biweekly": "Cada dos semanas"
+    },
     "fields": {
+      "select_placeholder": "— Selecciona —",
       "preferred_date": "Fecha preferida para la primera recolección",
       "not_sure_yet": "No estoy seguro todavía — lo confirmo después",
       "not_sure_subcopy": "No hay problema. Te escribiremos cada 2 semanas para saber cómo vas. Puedes volver aquí en cualquier momento para fijarla.",

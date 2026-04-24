@@ -3,13 +3,13 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Claim from './pages/Claim';
 import OnboardingIndex from './pages/OnboardingIndex';
-import StepPlaceholder from './pages/StepPlaceholder';
 import Step1Profile from './pages/steps/Step1Profile';
 import Step2Safe from './pages/steps/Step2Safe';
 import Step3Banking from './pages/steps/Step3Banking';
 import Step4Deposit from './pages/steps/Step4Deposit';
 import Step5ChangeOrder from './pages/steps/Step5ChangeOrder';
 import Step6Invoicing from './pages/steps/Step6Invoicing';
+import Step7FirstPickup from './pages/steps/Step7FirstPickup';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -49,16 +49,7 @@ export default function App() {
         <Route path="deposit" element={<Step4Deposit />} />
         <Route path="change-order" element={<Step5ChangeOrder />} />
         <Route path="invoicing" element={<Step6Invoicing />} />
-        <Route
-          path="launch"
-          element={
-            <StepPlaceholder
-              stepId={7}
-              titleKey="step_7_launch.title"
-              subtitleKey="step_7_launch.subtitle"
-            />
-          }
-        />
+        <Route path="launch" element={<Step7FirstPickup />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

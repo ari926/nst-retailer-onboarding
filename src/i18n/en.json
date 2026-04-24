@@ -252,8 +252,26 @@
 
   "step_7_launch": {
     "title": "When do you want your first pickup?",
-    "subtitle": "We need a minimum 10 calendar-day window to schedule your first pickup. The earliest date below is {earliestDate}.",
+    "subtitle": "We need a minimum 10 calendar-day window to schedule your first pickup.",
+    "earliest_callout": "Earliest first pickup: {earliestDate}. We need 10 calendar days to line up the route.",
+    "mode_commit": "I know the date I want",
+    "day_short": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "frequencies": {
+      "weekly": "Weekly",
+      "twice_weekly": "Twice a week",
+      "thrice_weekly": "Three times a week",
+      "daily": "Daily (Mon–Fri)",
+      "biweekly": "Every two weeks"
+    },
     "fields": {
+      "select_placeholder": "— Select —",
       "preferred_date": "Preferred first pickup date",
       "not_sure_yet": "I'm not sure yet — I'll confirm later",
       "not_sure_subcopy": "No problem. We'll check in every 2 weeks. You can come back here anytime to lock it in.",
