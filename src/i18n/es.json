@@ -68,6 +68,11 @@
       "download_cta": "Descargar resumen de operaciones",
       "downloading": "Preparando PDF…",
       "downloaded": "Descargado {filename}"
+    },
+    "sync": {
+      "pending": "Sincronizando con operaciones de NST…",
+      "synced": "Sincronizado con operaciones de NST. Tu representante tiene todo lo que necesita.",
+      "failed": "Algunos pasos no llegaron a nuestro sistema. Tu representante de NST se comunicará pronto."
     }
   },
 
