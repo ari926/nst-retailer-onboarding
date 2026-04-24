@@ -6,6 +6,7 @@ import OnboardingIndex from './pages/OnboardingIndex';
 import StepPlaceholder from './pages/StepPlaceholder';
 import Step1Profile from './pages/steps/Step1Profile';
 import Step2Safe from './pages/steps/Step2Safe';
+import Step3Banking from './pages/steps/Step3Banking';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -41,16 +42,7 @@ export default function App() {
         <Route index element={<OnboardingIndex />} />
         <Route path="profile" element={<Step1Profile />} />
         <Route path="safe" element={<Step2Safe />} />
-        <Route
-          path="banking"
-          element={
-            <StepPlaceholder
-              stepId={3}
-              titleKey="step_3_banking.title"
-              subtitleKey="step_3_banking.subtitle"
-            />
-          }
-        />
+        <Route path="banking" element={<Step3Banking />} />
         <Route
           path="deposit"
           element={
