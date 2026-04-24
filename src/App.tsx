@@ -9,6 +9,7 @@ import Step2Safe from './pages/steps/Step2Safe';
 import Step3Banking from './pages/steps/Step3Banking';
 import Step4Deposit from './pages/steps/Step4Deposit';
 import Step5ChangeOrder from './pages/steps/Step5ChangeOrder';
+import Step6Invoicing from './pages/steps/Step6Invoicing';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -47,16 +48,7 @@ export default function App() {
         <Route path="banking" element={<Step3Banking />} />
         <Route path="deposit" element={<Step4Deposit />} />
         <Route path="change-order" element={<Step5ChangeOrder />} />
-        <Route
-          path="invoicing"
-          element={
-            <StepPlaceholder
-              stepId={6}
-              titleKey="step_6_invoicing.title"
-              subtitleKey="step_6_invoicing.subtitle"
-            />
-          }
-        />
+        <Route path="invoicing" element={<Step6Invoicing />} />
         <Route
           path="launch"
           element={
