@@ -43,6 +43,32 @@
     }
   },
 
+  "nav": {
+    "step_of": "Step {current} of {total}",
+    "step_1_short": "Store profile",
+    "step_2_short": "Safe & keys",
+    "step_3_short": "Banking",
+    "step_4_short": "Sample deposit",
+    "step_5_short": "Sample change order",
+    "step_6_short": "Invoicing",
+    "step_7_short": "First pickup"
+  },
+
+  "onboarding": {
+    "overview_eyebrow": "Setup overview",
+    "welcome_title": "Let's get your store set up.",
+    "welcome_subtitle": "Seven quick steps. You can save and come back anytime.",
+    "all_done_title": "Nice — you're ready to launch.",
+    "all_done_subtitle": "Your operations team will confirm your launch date shortly.",
+    "next_up": "Next up"
+  },
+
+  "home": {
+    "subtitle": "Your self-serve setup starts here. Claim your account to begin.",
+    "claim_cta": "Claim your account",
+    "preview_cta": "Preview the flow"
+  },
+
   "step_0_claim": {
     "title": "Welcome to NST, {firstName}.",
     "subtitle": "Your agreement is signed. Let's get your store set up.",
