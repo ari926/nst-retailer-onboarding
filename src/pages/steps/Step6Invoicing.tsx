@@ -9,12 +9,24 @@ import { Mail, CheckCircle2, AlertCircle } from 'lucide-react';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
-import { sendSampleInvoice } from '../../lib/emailService';
+import { sendSampleInvoice, getLatestSampleInvoice } from '../../lib/emailService';
 import {
   step6Schema,
   step6Defaults,
   type Step6Values,
 } from './Step6Invoicing.schema';
+
+/** Tiny relative-time formatter, EN/ES via Intl. */
+function formatRelative(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(ms / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.round(hrs / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
 
 /**
  * Step 6 — Invoicing contact + sample invoice.
@@ -45,6 +57,10 @@ export default function Step6Invoicing() {
   >('idle');
   const [sentToEmail, setSentToEmail] = useState('');
   const [bounceReason, setBounceReason] = useState('');
+  const [lastSent, setLastSent] = useState<{
+    when: string;
+    accepted: boolean;
+  } | null>(null);
 
   const methods = useForm<Step6Values>({
     resolver: zodResolver(step6Schema),
@@ -65,12 +81,19 @@ export default function Step6Invoicing() {
     (async () => {
       const draft = await loadDraft<Step6Values>(6);
       if (mounted && draft) reset(draft);
+      // Show "last sent" so the retailer doesn't spam the button.
+      if (sfdcAccountId) {
+        const last = await getLatestSampleInvoice(sfdcAccountId);
+        if (mounted && last) {
+          setLastSent({ when: last.sentAt, accepted: last.accepted });
+        }
+      }
       setDraftLoaded(true);
     })();
     return () => {
       mounted = false;
     };
-  }, [reset]);
+  }, [reset, sfdcAccountId]);
 
   useEffect(() => {
     if (!draftLoaded) return;
@@ -196,6 +219,17 @@ export default function Step6Invoicing() {
               <li>{t('step_6_invoicing.cadence_bullet_2')}</li>
               <li>{t('step_6_invoicing.cadence_bullet_3')}</li>
             </ul>
+            {lastSent && (
+              <p className="sample-callout__last">
+                {lastSent.accepted
+                  ? t('step_6_invoicing.last_sent', {
+                      when: formatRelative(lastSent.when),
+                    })
+                  : t('step_6_invoicing.last_sent_bounced', {
+                      when: formatRelative(lastSent.when),
+                    })}
+              </p>
+            )}
           </div>
 
           <div className="field-row">

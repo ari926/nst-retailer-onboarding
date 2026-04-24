@@ -259,7 +259,9 @@
     "sent_subcopy": "Check your inbox in a minute or two. Hit continue when it arrives so we can lock in your launch date.",
     "ack_button": "I got the sample",
     "bounce_error": "Your email bounced. Please update the address and try again.",
-    "bounce_reason_prefix": "Reason from our email provider:"
+    "bounce_reason_prefix": "Reason from our email provider:",
+    "last_sent": "Last sample sent {when}.",
+    "last_sent_bounced": "Last attempt bounced {when}. Update the address and resend."
   },
 
   "step_7_launch": {
