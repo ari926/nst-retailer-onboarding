@@ -10,6 +10,10 @@ import { useOnboardingStore } from '../../stores/onboardingStore';
  */
 export function Sidebar() {
   const { t } = useTranslation();
+  // Subscribe to the underlying state, not just `getStepStatus` (a stable
+  // function reference would never trigger a re-render on state changes).
+  useOnboardingStore((s) => s.currentStep);
+  useOnboardingStore((s) => s.completedSteps);
   const getStepStatus = useOnboardingStore((s) => s.getStepStatus);
 
   return (
