@@ -667,3 +667,13 @@
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* Sample callout — "last sent X minutes ago" line (PR #12) */
+.sample-callout__last {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #93c5fd;
+  font-size: 0.8125rem;
+  color: #1e40af;
+  font-style: italic;
+}

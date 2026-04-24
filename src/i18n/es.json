@@ -259,7 +259,9 @@
     "sent_subcopy": "Revisa tu bandeja en uno o dos minutos. Dale continuar cuando llegue para confirmar tu fecha de lanzamiento.",
     "ack_button": "Ya recibí la muestra",
     "bounce_error": "Tu correo rebotó. Por favor actualiza la dirección e intenta de nuevo.",
-    "bounce_reason_prefix": "Razón del proveedor de correo:"
+    "bounce_reason_prefix": "Razón del proveedor de correo:",
+    "last_sent": "Última muestra enviada hace {when}.",
+    "last_sent_bounced": "El último intento rebotó hace {when}. Actualiza la dirección y reenvía."
   },
 
   "step_7_launch": {

@@ -1,20 +1,21 @@
 /**
  * Email service — sends transactional emails via Resend.
  *
- * V1: mock implementation that pretends to send and always succeeds.
- * In mock mode, a retailer email ending in "@bounce.test" simulates a
- * bounce so we can exercise the failure path in the UI.
+ * Mock mode (VITE_MOCK_AUTH=true): writes to localStorage and pretends
+ * to send. A retailer email ending in "@bounce.test" simulates a bounce
+ * so we can exercise the failure path in the UI.
  *
- * Real integration lands in PR #12 — the Supabase Edge Function
- * `send-sample-invoice` calls Resend and writes the delivery result to
- * the `invoice_samples` table.
+ * Real mode: invokes the Supabase Edge Function `send-sample-invoice`
+ * (PR #12) which calls Resend and writes the delivery result to the
+ * `invoice_samples` table.
  *
  * The Supabase `retailers` table owns the durable invoicing contact;
- * the SFDC Flow templates in PR #12 handle the production weekly
- * invoice cadence (not this app).
+ * the SFDC Flow templates (in supabase/functions/_shared/email-templates)
+ * handle the production weekly invoice cadence — not this app.
  */
 
 import { MOCK_AUTH_ENABLED } from '../hooks/useAuth';
+import { supabase } from './supabase';
 
 export interface SampleInvoicePayload {
   sfdcAccountId: string;
@@ -34,6 +35,27 @@ export interface SampleInvoiceResult {
   sentAt: string;
 }
 
+const MOCK_KEY = 'nst_mock_invoice_samples';
+
+interface MockRow extends SampleInvoiceResult {
+  storefrontName: string;
+  contactName: string;
+  contactEmail: string;
+}
+
+function readMockRows(): Record<string, MockRow[]> {
+  const raw = localStorage.getItem(MOCK_KEY);
+  return raw ? (JSON.parse(raw) as Record<string, MockRow[]>) : {};
+}
+
+function writeMockRow(sfdcAccountId: string, row: MockRow): void {
+  const all = readMockRows();
+  const list = all[sfdcAccountId] ?? [];
+  list.unshift(row);
+  all[sfdcAccountId] = list.slice(0, 10); // keep last 10
+  localStorage.setItem(MOCK_KEY, JSON.stringify(all));
+}
+
 /**
  * Send a sample NST invoice. In mock mode, email addresses ending in
  * "@bounce.test" are rejected; everything else succeeds after 700 ms.
@@ -43,30 +65,80 @@ export async function sendSampleInvoice(
 ): Promise<SampleInvoiceResult> {
   if (MOCK_AUTH_ENABLED) {
     await new Promise((r) => setTimeout(r, 700));
-    if (payload.contactEmail.toLowerCase().endsWith('@bounce.test')) {
-      return {
-        messageId: `mock-bounce-${Date.now()}`,
-        accepted: false,
-        errorReason: 'mailbox_does_not_exist',
-        sentAt: new Date().toISOString(),
-      };
-    }
-    return {
-      messageId: `mock-${Date.now()}`,
-      accepted: true,
-      sentAt: new Date().toISOString(),
-    };
+    const sentAt = new Date().toISOString();
+    const isBounce = payload.contactEmail.toLowerCase().endsWith('@bounce.test');
+    const result: SampleInvoiceResult = isBounce
+      ? {
+          messageId: `mock-bounce-${Date.now()}`,
+          accepted: false,
+          errorReason: 'mailbox_does_not_exist',
+          sentAt,
+        }
+      : {
+          messageId: `mock-${Date.now()}`,
+          accepted: true,
+          sentAt,
+        };
+    writeMockRow(payload.sfdcAccountId, {
+      ...result,
+      storefrontName: payload.storefrontName,
+      contactName: payload.contactName,
+      contactEmail: payload.contactEmail,
+    });
+    return result;
   }
 
-  // Real path — calls the Supabase Edge Function which wraps Resend.
-  // Implemented in PR #12.
-  const resp = await fetch('/functions/v1/send-sample-invoice', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!resp.ok) {
-    throw new Error(`Failed to send sample invoice: ${resp.status}`);
+  // Real path — Supabase Edge Function. Uses functions.invoke so the
+  // user's JWT (which carries sfdc_account_id) is forwarded automatically.
+  const { data, error } = await supabase.functions.invoke<SampleInvoiceResult>(
+    'send-sample-invoice',
+    {
+      body: {
+        storefrontName: payload.storefrontName,
+        contactName: payload.contactName,
+        contactEmail: payload.contactEmail,
+      },
+    },
+  );
+  if (error) {
+    // Edge Function returns 502 on Resend failure; functions.invoke
+    // surfaces that as an error but still includes the JSON body so we
+    // can show the precise reason.
+    const detail = (error as unknown as { context?: { errorReason?: string } })
+      .context?.errorReason;
+    throw new Error(detail ? `email_failed:${detail}` : 'email_failed');
   }
-  return (await resp.json()) as SampleInvoiceResult;
+  if (!data) throw new Error('email_failed:empty_response');
+  return data;
+}
+
+/**
+ * Returns the most recent sample invoice attempt for the current
+ * retailer, or null if none has been sent yet. Used by Step 6 to show
+ * "Last sent: 5 minutes ago" so the retailer doesn't spam the button.
+ */
+export async function getLatestSampleInvoice(
+  sfdcAccountId: string,
+): Promise<SampleInvoiceResult | null> {
+  if (MOCK_AUTH_ENABLED) {
+    const rows = readMockRows()[sfdcAccountId] ?? [];
+    return rows[0] ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from('v_latest_invoice_sample')
+    .select('contact_email, accepted, error_reason, sent_at, resend_id')
+    .eq('sfdc_account_id', sfdcAccountId)
+    .maybeSingle();
+  if (error) {
+    console.warn('[emailService] getLatestSampleInvoice failed', error);
+    return null;
+  }
+  if (!data) return null;
+  return {
+    messageId: data.resend_id ?? '',
+    accepted: !!data.accepted,
+    errorReason: data.error_reason ?? undefined,
+    sentAt: data.sent_at,
+  };
 }
