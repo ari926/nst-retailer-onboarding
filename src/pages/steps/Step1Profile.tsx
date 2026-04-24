@@ -9,6 +9,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { HoursGrid } from '../../components/steps/HoursGrid';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step1Schema,
   step1Defaults,
@@ -82,9 +83,11 @@ export default function Step1Profile() {
     }
   };
 
+  const onInvalid = useScrollToFirstError<Step1Values>();
+
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={1}
           titleKey="step_1_profile.title"

@@ -10,6 +10,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
 import { fetchBankingOcr } from '../../lib/ocrService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step3Schema,
   step3Defaults,
@@ -123,10 +124,11 @@ export default function Step3Banking() {
   };
 
   const reviewMode = source === 'ocr' && !ocrFailed;
+  const onInvalid = useScrollToFirstError<Step3Values>();
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={3}
           titleKey="step_3_banking.title"

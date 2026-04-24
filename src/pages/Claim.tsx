@@ -9,6 +9,7 @@ import { mockSignIn, MOCK_AUTH_ENABLED } from '../hooks/useAuth';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { LanguageToggle } from '../components/layout/LanguageToggle';
 import { Logo } from '../components/layout/Logo';
+import { useScrollToFirstError } from '../hooks/useScrollToFirstError';
 
 /**
  * Step 0 — Claim account.
@@ -121,6 +122,8 @@ export default function Claim() {
     }
   };
 
+  const onInvalid = useScrollToFirstError<ClaimFormValues>();
+
   return (
     <main style={{ minHeight: '100vh', padding: 'var(--space-6) 0' }}>
       <header style={{
@@ -147,7 +150,7 @@ export default function Claim() {
           <p className="text-muted">{t('step_0_claim.subtitle')}</p>
         </header>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="card stack stack-md" noValidate>
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="card stack stack-md" noValidate>
           {/* Email (read-only from deep link) */}
           <div className="field">
             <label htmlFor="email" className="field-label">

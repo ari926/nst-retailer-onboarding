@@ -9,6 +9,7 @@ import { Copy, Check } from 'lucide-react';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step4Schema,
   step4Defaults,
@@ -105,9 +106,11 @@ export default function Step4Deposit() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const onInvalid = useScrollToFirstError<Step4Values>();
+
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={4}
           titleKey="step_4_deposit.title"

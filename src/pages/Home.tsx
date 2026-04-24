@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { trackEvent } from '../lib/analytics';
 
@@ -53,9 +53,9 @@ export default function Home() {
             <button type="button" className="btn btn-primary" onClick={handleClaim}>
               {t('home.claim_cta', 'Claim your account')}
             </button>
-            <a href="/claim" className="btn btn-secondary">
+            <Link to="/login" className="btn btn-secondary">
               {t('home.preview_cta', 'Preview the flow')}
-            </a>
+            </Link>
             <button type="button" className="btn btn-ghost" onClick={toggleLang}>
               {i18n.language.startsWith('es') ? 'EN' : 'ES'}
             </button>

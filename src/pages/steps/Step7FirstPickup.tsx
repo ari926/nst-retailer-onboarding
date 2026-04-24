@@ -10,6 +10,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step7Schema,
   step7Defaults,
@@ -61,6 +62,8 @@ export default function Step7FirstPickup() {
     setValue,
     formState: { errors },
   } = methods;
+
+  const onInvalid = useScrollToFirstError<Step7Values>();
 
   const deferred = watch('deferred');
   const serviceDays = watch('serviceDays') ?? [];
@@ -152,7 +155,7 @@ export default function Step7FirstPickup() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={7}
           titleKey="step_7_launch.title"

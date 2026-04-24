@@ -30,10 +30,17 @@ export const step2Schema = z
     safeMake: z.string().optional(),
     safeModel: z.string().optional(),
     safeSerial: z.string().optional(),
-    dashboardConnection: z.enum(DASHBOARD_OPTIONS).optional(),
+    // Radios hand us '' (unselected) or null (reset); accept both here so the
+    // enum never surfaces a raw Zod union message. superRefine enforces the
+    // actually-required case below.
+    dashboardConnection: z
+      .union([z.enum(DASHBOARD_OPTIONS), z.literal(''), z.null()])
+      .optional(),
 
     // No-smart-safe branch
-    storageMethod: z.enum(STORAGE_METHODS).optional(),
+    storageMethod: z
+      .union([z.enum(STORAGE_METHODS), z.literal(''), z.null()])
+      .optional(),
     storageMethodOther: z.string().optional(),
 
     // Always

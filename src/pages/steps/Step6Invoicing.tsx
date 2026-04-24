@@ -10,6 +10,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
 import { sendSampleInvoice, getLatestSampleInvoice } from '../../lib/emailService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step6Schema,
   step6Defaults,
@@ -75,6 +76,8 @@ export default function Step6Invoicing() {
     reset,
     formState: { errors },
   } = methods;
+
+  const onInvalid = useScrollToFirstError<Step6Values>();
 
   useEffect(() => {
     let mounted = true;
@@ -187,7 +190,7 @@ export default function Step6Invoicing() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={6}
           titleKey="step_6_invoicing.title"
