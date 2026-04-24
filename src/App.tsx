@@ -5,6 +5,7 @@ import Claim from './pages/Claim';
 import OnboardingIndex from './pages/OnboardingIndex';
 import StepPlaceholder from './pages/StepPlaceholder';
 import Step1Profile from './pages/steps/Step1Profile';
+import Step2Safe from './pages/steps/Step2Safe';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -39,16 +40,7 @@ export default function App() {
       >
         <Route index element={<OnboardingIndex />} />
         <Route path="profile" element={<Step1Profile />} />
-        <Route
-          path="safe"
-          element={
-            <StepPlaceholder
-              stepId={2}
-              titleKey="step_2_safe.title"
-              subtitleKey="step_2_safe.subtitle"
-            />
-          }
-        />
+        <Route path="safe" element={<Step2Safe />} />
         <Route
           path="banking"
           element={
