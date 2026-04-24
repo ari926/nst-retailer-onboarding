@@ -48,7 +48,14 @@ export const useOnboardingStore = create<OnboardingStore>()(
 
       getProgress: () => {
         const { completedSteps } = get();
-        return Math.round((completedSteps.length / TOTAL_STEPS) * 100);
+        // Count only real flow steps (1..7). Step 0 (claim) is pre-flow.
+        const flowCompleted = STEPS.filter((s) =>
+          completedSteps.includes(s.id),
+        ).length;
+        return Math.min(
+          100,
+          Math.round((flowCompleted / TOTAL_STEPS) * 100),
+        );
       },
 
       getStepStatus: (step) => {

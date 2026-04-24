@@ -61,7 +61,14 @@
     "welcome_subtitle": "Seven quick steps. You can save and come back anytime.",
     "all_done_title": "Nice — you're ready to launch.",
     "all_done_subtitle": "Your operations team will confirm your launch date shortly.",
-    "next_up": "Next up"
+    "next_up": "Next up",
+    "handoff": {
+      "ready_title": "All 7 steps submitted",
+      "ready_sub": "Your NST rep is lining up your launch date. Download a summary to keep for your records — it's the same doc ops uses to set up your store.",
+      "download_cta": "Download ops summary",
+      "downloading": "Preparing PDF…",
+      "downloaded": "Downloaded {filename}"
+    }
   },
 
   "home": {
