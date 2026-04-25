@@ -98,6 +98,8 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   height: 32px;
+  flex-shrink: 0; /* keep both EN and ES buttons fully visible when the
+                     header right column is tight */
 }
 
 .lang-toggle__btn {
@@ -345,6 +347,18 @@
   }
 }
 
+/* Below 960px there isn't room for save-later + message-team alongside the
+   progress bar, language toggle, and sign-out without one of them clipping. */
+@media (max-width: 960px) {
+  .app-header__right .btn:not(.lang-toggle__btn) {
+    display: none; /* collapse save-later/support; kebab menu deferred */
+  }
+  /* Sign-out is icon-only — bring it back so the user still has an exit. */
+  .app-header__right > button[aria-label][title]:last-child {
+    display: inline-flex;
+  }
+}
+
 @media (max-width: 640px) {
   .app-header {
     grid-template-columns: 1fr auto;
@@ -358,7 +372,4 @@
     order: 3;
   }
   .progress { min-width: 0; width: 100%; }
-  .app-header__right .btn:not(.lang-toggle__btn) {
-    display: none; /* collapse save-later/support on small screens; kebab menu in PR #14 */
-  }
 }

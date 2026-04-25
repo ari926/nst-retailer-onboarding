@@ -24,6 +24,14 @@ export function AppLayout() {
     if (match) setCurrentStep(match.id);
   }, [pathname, setCurrentStep]);
 
+  // Scroll the main content back to the top on every route change so the next
+  // step starts from its header rather than wherever the user left off in the
+  // previous step (the page is sticky-scrolled, not scroll-restored by RR).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'auto' });
+  }, [pathname]);
+
   return (
     <div className="app-shell">
       <Header />
