@@ -7,8 +7,10 @@ import toast from 'react-hot-toast';
 import { Plus, Trash2 } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
+import { ErrorSummaryBanner } from '../../components/ui/ErrorSummaryBanner';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step2Schema,
   step2Defaults,
@@ -93,9 +95,27 @@ export default function Step2Safe() {
     }
   };
 
+  const onInvalid = useScrollToFirstError<Step2Values>();
+
+  const errorLabels: Record<string, string> = {
+    hasSmartSafe: t('step_2_safe.fields.has_smart_safe_question'),
+    safeMake: t('step_2_safe.fields.safe_make'),
+    safeModel: t('step_2_safe.fields.safe_model'),
+    safeSerial: t('step_2_safe.fields.safe_serial'),
+    dashboardConnection: t('step_2_safe.fields.dashboard_question'),
+    storageMethod: t('step_2_safe.fields.storage_method_question'),
+    storageMethodOther: t('step_2_safe.fields.storage_options.other'),
+    keyHolders: t('step_2_safe.fields.key_holder_section'),
+    provisionalCredit: t('step_2_safe.fields.provisional_credit_question'),
+  };
+  fields.forEach((_, idx) => {
+    errorLabels[`keyHolders.${idx}.name`] = `${t('step_2_safe.fields.key_holder_name')} (${idx + 1})`;
+    errorLabels[`keyHolders.${idx}.location`] = `${t('step_2_safe.fields.key_holder_location')} (${idx + 1})`;
+  });
+
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={2}
           titleKey="step_2_safe.title"
@@ -103,6 +123,7 @@ export default function Step2Safe() {
           submitting={submitting}
         >
           <div className="step-card stack stack-md">
+            <ErrorSummaryBanner errors={errors} labels={errorLabels} />
             {/* Smart safe yes/no */}
             <div className="field">
               <label className="field-label field-required">

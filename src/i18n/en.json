@@ -77,7 +77,10 @@
   },
 
   "home": {
-    "subtitle": "Your self-serve setup starts here. Claim your account to begin.",
+    "title": "NST Retailer Onboarding",
+    "subtitle": "Your self-serve setup starts here. Claim your account to begin — most retailers finish in about 20 minutes.",
+    "body": "We'll confirm your storefront details, collect banking info, and schedule your first pickup. You can save and come back anytime.",
+    "secure_note": "All inputs are encrypted at rest. NST never stores full safe combinations.",
     "claim_cta": "Claim your account",
     "preview_cta": "Preview the flow"
   },
@@ -185,7 +188,8 @@
       "flag_button": "Flag for NST to update",
       "mismatch_notes": "Tell us what's wrong"
     },
-    "ocr_fail_banner": "We couldn't read your form automatically. Please type the details from your signed cash info form."
+    "ocr_fail_banner": "We couldn't read your form automatically. Please type the details from your signed cash info form.",
+    "security_note": "Banking details are encrypted at rest with AWS KMS and only the last 4 are ever shown back to you. Full numbers are read-only to the NST ops team."
   },
 
   "step_4_deposit": {

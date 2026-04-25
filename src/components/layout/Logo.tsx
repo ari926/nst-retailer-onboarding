@@ -1,8 +1,12 @@
 /**
- * NST wordmark. SVG-only, no external image asset, no bank logos anywhere.
- * Uses CSS tokens so it inherits the current theme.
+ * NST wordmark. The official logo (white-on-transparent PNG from
+ * nationalsecuretransport.com) is rendered inside a navy tile so it stays
+ * legible on the light header.
  */
-export function Logo({ size = 32 }: { size?: number }) {
+export function Logo({ size = 36 }: { size?: number }) {
+  // Logo is 731×231 → ~3.16:1 aspect; we render it at the requested height
+  // and let width scale.
+  const padding = Math.round(size * 0.18);
   return (
     <div
       role="img"
@@ -10,26 +14,18 @@ export function Logo({ size = 32 }: { size?: number }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 'var(--space-2)',
+        background: 'var(--nst-dark)',
+        borderRadius: 'var(--radius-sm)',
+        padding: `${padding}px ${padding * 1.4}px`,
+        height: size,
       }}
     >
-      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="6" fill="var(--nst-dark)" />
-        <path
-          d="M8 10 L8 22 L11 22 L11 15 L21 22 L24 22 L24 10 L21 10 L21 17 L11 10 Z"
-          fill="var(--nst-teal)"
-        />
-      </svg>
-      <span
-        style={{
-          fontWeight: 'var(--fw-semibold)',
-          fontSize: 'var(--fs-base)',
-          color: 'var(--text-primary)',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        NST
-      </span>
+      <img
+        src={`${import.meta.env.BASE_URL}nst-logo.png`}
+        alt=""
+        aria-hidden="true"
+        style={{ height: '100%', width: 'auto', display: 'block' }}
+      />
     </div>
   );
 }

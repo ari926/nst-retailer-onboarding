@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step5Schema,
   step5Defaults,
@@ -33,8 +34,12 @@ export default function Step5ChangeOrder() {
   const [submitting, setSubmitting] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
 
+  // Schema input (form-state) and output (validated) types differ because of
+  // empty-string-tolerant numeric fields. RHF only models one. Cast the
+  // resolver to satisfy the output-typed generic; values are coerced on submit.
   const methods = useForm<Step5Values>({
-    resolver: zodResolver(step5Schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(step5Schema) as any,
     defaultValues: step5Defaults,
     mode: 'onBlur',
   });
@@ -104,9 +109,11 @@ export default function Step5ChangeOrder() {
     }
   };
 
+  const onInvalid = useScrollToFirstError<Step5Values>();
+
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={5}
           titleKey="step_5_change_order.title"

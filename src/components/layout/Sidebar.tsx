@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, Circle, Lock } from 'lucide-react';
-import { STEPS } from '../../types/onboarding';
+import { STEPS, type StepId } from '../../types/onboarding';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 
 /**
@@ -10,13 +10,27 @@ import { useOnboardingStore } from '../../stores/onboardingStore';
  */
 export function Sidebar() {
   const { t } = useTranslation();
-  const getStepStatus = useOnboardingStore((s) => s.getStepStatus);
+  // Subscribe to the slices we actually depend on so the component re-renders
+  // on state changes. Computing status inline (instead of calling the stable
+  // `getStepStatus` selector) ensures every render reads the latest values —
+  // earlier versions had a bug where the sidebar never advanced past Step 1
+  // because the selector reference never changed.
+  const currentStep = useOnboardingStore((s) => s.currentStep);
+  const completedSteps = useOnboardingStore((s) => s.completedSteps);
+
+  const statusFor = (stepId: StepId): 'completed' | 'in_progress' | 'available' | 'locked' => {
+    if (completedSteps.includes(stepId)) return 'completed';
+    if (stepId === currentStep) return 'in_progress';
+    const previous = STEPS.filter((s) => s.id < stepId).map((s) => s.id);
+    const allPreviousDone = previous.every((id) => completedSteps.includes(id));
+    return allPreviousDone ? 'available' : 'locked';
+  };
 
   return (
     <nav className="app-sidebar" aria-label="Onboarding steps">
       <ol className="step-list">
         {STEPS.map((step) => {
-          const status = getStepStatus(step.id);
+          const status = statusFor(step.id);
           const disabled = status === 'locked';
           const StepIcon =
             status === 'completed' ? Check :

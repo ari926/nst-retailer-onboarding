@@ -1,11 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Logo } from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { ProgressBar } from './ProgressBar';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { signOut } from '../../hooks/useAuth';
+
+const SUPPORT_EMAIL = 'support@nstops.com';
 
 /**
  * Top bar for onboarding flow.
@@ -23,6 +26,24 @@ export function Header() {
     await signOut();
     reset();
     navigate('/login', { replace: true });
+  };
+
+  // Progress is already autosaved every 1.5s on each step form — this button
+  // just confirms that and returns the user to the landing page.
+  const handleSaveLater = () => {
+    toast.success(
+      t(
+        'global.header.save_later_toast',
+        "Progress saved. We'll email a link to pick up where you left off.",
+      ),
+    );
+    navigate('/');
+  };
+
+  const handleSupport = () => {
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+      t('global.header.support_subject', 'Onboarding question'),
+    )}`;
   };
 
   return (
@@ -47,10 +68,15 @@ export function Header() {
       </div>
 
       <div className="app-header__right">
-        <button type="button" className="btn btn-ghost text-sm">
+        <button type="button" className="btn btn-ghost text-sm" onClick={handleSaveLater}>
           {t('global.header.save_later')}
         </button>
-        <button type="button" className="btn btn-ghost text-sm" aria-label="Contact support">
+        <button
+          type="button"
+          className="btn btn-ghost text-sm"
+          onClick={handleSupport}
+          aria-label={t('global.header.support_chip')}
+        >
           {t('global.header.support_chip')}
         </button>
         <LanguageToggle />

@@ -32,4 +32,13 @@ i18n
     },
   });
 
+const syncHtmlLang = (lng: string) => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = lng.startsWith('es') ? 'es' : 'en';
+  }
+};
+
+syncHtmlLang(i18n.resolvedLanguage || i18n.language || 'en');
+i18n.on('languageChanged', syncHtmlLang);
+
 export default i18n;

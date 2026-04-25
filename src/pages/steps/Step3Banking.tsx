@@ -4,12 +4,13 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
 import { fetchBankingOcr } from '../../lib/ocrService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step3Schema,
   step3Defaults,
@@ -123,10 +124,11 @@ export default function Step3Banking() {
   };
 
   const reviewMode = source === 'ocr' && !ocrFailed;
+  const onInvalid = useScrollToFirstError<Step3Values>();
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={3}
           titleKey="step_3_banking.title"
@@ -147,6 +149,16 @@ export default function Step3Banking() {
                     <span>{t('step_3_banking.ocr_fail_banner')}</span>
                   </div>
                 )}
+
+                <div className="banner banner--info" role="note">
+                  <ShieldCheck size={18} aria-hidden />
+                  <span>
+                    {t(
+                      'step_3_banking.security_note',
+                      'Banking details are encrypted at rest with AWS KMS and only the last 4 are ever shown back to you. Full numbers are read-only to the NST ops team.'
+                    )}
+                  </span>
+                </div>
 
                 <div className="grid-2">
                   <div className="field">

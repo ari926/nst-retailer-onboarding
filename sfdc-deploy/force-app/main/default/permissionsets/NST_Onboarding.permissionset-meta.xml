@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Grants read/edit access to all NST Retailer Onboarding fields and the Safe_Setup__c object. Assign to integration users (the API user that posts from the onboarding app) and to internal roles that need visibility (Sales, CS, Ops).</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>NST Onboarding</label>
+    <license>Salesforce</license>
+
+    <!-- Account custom fields -->
+    <fieldPermissions><field>Account.NST_Temp_Code__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Onboarding_Status__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Launch_Date__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Hours_of_Operation_JSON__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Timezone__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Store_Type__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Loading_Dock_Notes__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Bank_Account_Last4__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Voided_Check_URL__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Account.Pickup_Window__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+
+    <!-- Safe_Setup__c object -->
+    <objectPermissions>
+        <object>Safe_Setup__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>false</allowDelete>
+        <viewAllRecords>false</viewAllRecords>
+        <modifyAllRecords>false</modifyAllRecords>
+    </objectPermissions>
+
+    <!-- Safe_Setup__c fields -->
+    <fieldPermissions><field>Safe_Setup__c.Safe_Make__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Safe_Model__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Safe_Serial__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Safe_Type__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Combo_Last4__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Key_Holders_Count__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Backup_Key_Location__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Photo_URL__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+    <fieldPermissions><field>Safe_Setup__c.Verified__c</field><readable>true</readable><editable>true</editable></fieldPermissions>
+
+    <!-- Tab visibility -->
+    <tabSettings>
+        <tab>Safe_Setup__c</tab>
+        <visibility>Available</visibility>
+    </tabSettings>
+</PermissionSet>

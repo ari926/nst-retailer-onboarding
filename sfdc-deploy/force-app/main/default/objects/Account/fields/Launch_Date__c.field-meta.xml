@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Launch_Date__c</fullName>
+    <description>The confirmed first-pickup date. Used for ops scheduling and live reporting. May be blank during onboarding if retailer is in Awaiting Pickup status.</description>
+    <label>Launch Date</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>Date</type>
+</CustomField>

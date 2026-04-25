@@ -25,18 +25,36 @@ export const DENOMINATIONS = [
 
 export type DenominationKey = (typeof DENOMINATIONS)[number]['key'];
 
+// Empty-string-tolerant non-negative integer for denomination counts.
+// HTML number inputs surface '' when cleared; coerce to 0 for math, but
+// store the raw string in form state so the input doesn't show a
+// leading zero (which causes 'type 100' to become '0100').
+const denomCount = z
+  .union([z.literal(''), z.coerce.number().int().min(0)])
+  .transform((v) => (v === '' ? 0 : v));
+
 const denomCounts = z.object({
-  hundred: z.coerce.number().int().min(0),
-  fifty: z.coerce.number().int().min(0),
-  twenty: z.coerce.number().int().min(0),
-  ten: z.coerce.number().int().min(0),
-  five: z.coerce.number().int().min(0),
-  one: z.coerce.number().int().min(0),
+  hundred: denomCount,
+  fifty: denomCount,
+  twenty: denomCount,
+  ten: denomCount,
+  five: denomCount,
+  one: denomCount,
 });
+
+// Same pattern for the deposit amount — empty string is a valid in-progress
+// state; positivity is enforced after coercion so 0 / '' both surface as
+// 'must be greater than 0'.
+const depositAmount = z
+  .union([z.literal(''), z.coerce.number()])
+  .transform((v) => (v === '' ? NaN : v))
+  .refine((v) => Number.isFinite(v) && v > 0, {
+    message: 'Deposit amount must be greater than 0',
+  });
 
 export const step4Schema = z
   .object({
-    amount: z.coerce.number().positive('Deposit amount must be greater than 0'),
+    amount: depositAmount,
     date: z.string().min(1, 'Pick a date'),
     bagNumber: z.string().min(1, 'Enter the sealed bag number'),
     denominations: denomCounts,
@@ -63,11 +81,14 @@ export const step4Schema = z
   });
 
 export type Step4Values = z.infer<typeof step4Schema>;
-
-export const step4Defaults: Step4Values = {
-  amount: 0,
+// The form holds in-progress strings; the schema coerces on submit. We use
+// `any` here to avoid fighting Zod's input-vs-output type split — RHF only
+// cares about defaults at runtime.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const step4Defaults: any = {
+  amount: '',
   date: '',
   bagNumber: '',
-  denominations: { hundred: 0, fifty: 0, twenty: 0, ten: 0, five: 0, one: 0 },
+  denominations: { hundred: '', fifty: '', twenty: '', ten: '', five: '', one: '' },
   notes: '',
 };

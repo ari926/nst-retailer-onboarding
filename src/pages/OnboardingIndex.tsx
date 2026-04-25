@@ -7,6 +7,7 @@ import { useOnboardingStore } from '../stores/onboardingStore';
 import { STEPS } from '../types/onboarding';
 import { generateHandoffPdf } from '../lib/handoffPdf';
 import { getSyncStatus, type SfSyncSummary } from '../lib/salesforceService';
+import { trackEvent } from '../lib/analytics';
 
 /**
  * /onboarding landing — routes user to their current step.
@@ -55,7 +56,7 @@ function SyncIndicator({ sync }: { sync: SfSyncSummary }) {
 }
 
 export default function OnboardingIndex() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentStep = useOnboardingStore((s) => s.currentStep);
   const completedSteps = useOnboardingStore((s) => s.completedSteps);
   const storefrontName = useOnboardingStore((s) => s.storefrontName);
@@ -98,9 +99,15 @@ export default function OnboardingIndex() {
   const handleDownload = () => {
     setDownloading(true);
     try {
+      const lang = i18n.language.startsWith('es') ? 'es' : 'en';
       const filename = generateHandoffPdf({
         storefrontName: storefrontName ?? 'Store',
         sfdcAccountId,
+        lang,
+      });
+      trackEvent('onboarding.pdf_downloaded', {
+        sfdcAccountId: sfdcAccountId ?? null,
+        lang,
       });
       toast.success(
         t('onboarding.handoff.downloaded', 'Downloaded {filename}', {

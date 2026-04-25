@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Bank_Account_Last4__c</fullName>
+    <description>Last 4 of bank account number for display/audit. Full account # and routing # are NEVER stored in SF — they live encrypted in Supabase only.</description>
+    <label>Bank Account Last 4</label>
+    <length>4</length>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>Text</type>
+</CustomField>

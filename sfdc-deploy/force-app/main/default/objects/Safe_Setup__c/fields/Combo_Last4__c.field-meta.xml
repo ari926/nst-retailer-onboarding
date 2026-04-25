@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Combo_Last4__c</fullName>
+    <description>Last 4 of combination for verification only. NEVER store full combo. Recommend Shield Platform Encryption if license available.</description>
+    <label>Combo Last 4</label>
+    <length>4</length>
+    <required>false</required>
+    <type>Text</type>
+</CustomField>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Safe_Model__c</fullName>
+    <description>Model number/name of the safe.</description>
+    <label>Safe Model</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+</CustomField>

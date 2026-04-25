@@ -9,6 +9,7 @@ import { Copy, Check } from 'lucide-react';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { useScrollToFirstError } from '../../hooks/useScrollToFirstError';
 import {
   step4Schema,
   step4Defaults,
@@ -39,8 +40,12 @@ export default function Step4Deposit() {
     [sfdcAccountId],
   );
 
+  // Schema input (form-state) and output (validated) types differ because of
+  // empty-string-tolerant numeric fields. RHF only models one. Cast the
+  // resolver to satisfy the output-typed generic; values are coerced on submit.
   const methods = useForm<Step4Values>({
-    resolver: zodResolver(step4Schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(step4Schema) as any,
     defaultValues: step4Defaults,
     mode: 'onBlur',
   });
@@ -74,14 +79,14 @@ export default function Step4Deposit() {
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
 
+  // Subscribe to each denomination field individually so RHF emits a re-render
+  // on every keystroke. `watch('denominations')` returns the same object
+  // reference and `useMemo` would never recompute the total.
   const denomValues = watch('denominations');
-  const calculatedTotal = useMemo(() => {
-    if (!denomValues) return 0;
-    return DENOMINATIONS.reduce(
-      (sum, d) => sum + (Number(denomValues[d.key]) || 0) * d.value,
-      0,
-    );
-  }, [denomValues]);
+  const calculatedTotal = DENOMINATIONS.reduce(
+    (sum, d) => sum + (Number(denomValues?.[d.key]) || 0) * d.value,
+    0,
+  );
 
   const onSubmit = async (values: Step4Values) => {
     setSubmitting(true);
@@ -105,9 +110,11 @@ export default function Step4Deposit() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const onInvalid = useScrollToFirstError<Step4Values>();
+
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <StepShell
           stepId={4}
           titleKey="step_4_deposit.title"

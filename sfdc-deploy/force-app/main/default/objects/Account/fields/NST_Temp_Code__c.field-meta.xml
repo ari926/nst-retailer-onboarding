@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NST_Temp_Code__c</fullName>
+    <description>Magic-link claim code emitted when sales hands off the account to onboarding. Cleared on first successful claim.</description>
+    <externalId>true</externalId>
+    <label>NST Temp Code</label>
+    <length>12</length>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>Text</type>
+    <unique>true</unique>
+    <caseSensitive>true</caseSensitive>
+</CustomField>
