@@ -10,14 +10,41 @@ Everything in this doc must be ✅ before the first real retailer email goes out
 
 ## 1. Infrastructure & DNS
 
-- [ ] Domain `onboarding.nstops.com` pointed at Vercel (CNAME in GoDaddy).
-- [ ] `onboarding.nstops.com` SSL cert issued and auto-renewing.
-- [ ] Vercel production environment variables set:
+V1 deploys to **GitHub Pages** (Vercel never worked — sandbox token issue). The
+`vercel.json` in the repo root is vestigial; ignore it.
+
+- [ ] **GoDaddy CNAME**: log in to GoDaddy → DNS for `nationalsecuretransport.com` →
+      add record:
+      - Type: `CNAME`
+      - Name: `onboard`
+      - Value: `ari926.github.io.`
+      - TTL: 1 hour
+      Verify with `dig onboard.nationalsecuretransport.com +short` — should
+      return `ari926.github.io` once propagated (5–60 min).
+- [ ] `public/CNAME` committed with body `onboard.nationalsecuretransport.com`
+      so each Vite build copies it to `dist/`.
+- [ ] **GitHub repo settings** → **Pages**:
+      - Source: `gh-pages` branch, `/ (root)` folder.
+      - Custom domain: `onboard.nationalsecuretransport.com` (saved, green
+        check mark from GitHub's DNS check).
+      - Enforce HTTPS: enabled (Let's Encrypt cert auto-issued; can take up
+        to 24h after first save).
+- [ ] Build + publish flow documented for ops:
+      `VITE_MOCK_AUTH=true npm run build` then push `dist/` contents to
+      `gh-pages`. Replace `VITE_MOCK_AUTH=true` with `false` once §2 (Supabase)
+      is fully wired and Salesforce is seeding real accounts.
+- [ ] **SPA fallback for BrowserRouter**: when `VITE_MOCK_AUTH=false` flips us
+      from `HashRouter` to `BrowserRouter`, add `public/404.html` (duplicate of
+      `index.html`) so GitHub Pages serves the SPA shell on direct deep-links
+      like `/onboarding/safe`. Not needed under HashRouter.
+- [ ] Production environment variables baked into the build (Vite reads at
+      build time, not runtime — no `.env` server):
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
-  - `VITE_MOCK_AUTH=false` (prod must never leave this true)
+  - `VITE_MOCK_AUTH=false`
   - `VITE_SENTRY_DSN`
-- [ ] Vercel preview deployments restricted to `@nst*.com` and `@talaria.com` email via SSO.
+- [ ] Support footer + emails point to `support@nstops.com` (already in
+      `Header.tsx` mailto handler).
 
 ## 2. Supabase
 
