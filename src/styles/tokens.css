@@ -1,17 +1,21 @@
 /* =============================================================================
  * NST Design Tokens — Nexus-style CSS custom properties
  * =============================================================================
- * NST brand: dark navy (#0F1F2E) + teal (#00796B) + warm neutrals.
- * WCAG AA contrast throughout. Single accent, restraint.
+ * NST brand: navy (#1A2B57) + red accent (#A51E22) + warm neutrals.
+ * Pulled from nationalsecuretransport.com. WCAG AA contrast throughout.
  * ===========================================================================*/
 
 :root {
   /* --- Brand colors --- */
-  --nst-dark: #0F1F2E;         /* primary dark — navigation, headings */
-  --nst-dark-2: #1A2F42;       /* secondary dark — card borders on dark */
-  --nst-teal: #00796B;         /* primary accent — CTAs, links, progress */
-  --nst-teal-hover: #00594F;   /* teal hover */
-  --nst-teal-faint: #E6F2F0;   /* teal tint — selected states, highlights */
+  --nst-dark: #1A2B57;         /* primary navy — header, headings, CTAs */
+  --nst-dark-2: #122042;       /* hover/pressed navy */
+  --nst-teal: #1A2B57;         /* legacy alias kept for unaudited callsites; equals navy */
+  --nst-teal-hover: #122042;
+  --nst-teal-faint: #E6EAF2;   /* light navy tint — selected states, highlights */
+  --nst-accent: #A51E22;       /* brand red — used sparingly for accents */
+  --nst-accent-hover: #7A161A;
+  /* Generic primary alias — some components (e.g. chips) reference this. */
+  --color-primary: var(--nst-dark);
 
   /* --- Neutrals (warm) --- */
   --neutral-50: #FAFAF7;

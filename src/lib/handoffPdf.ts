@@ -21,7 +21,9 @@ import type { StepId } from '../types/onboarding';
  * stays as the retailer's "download my info" self-service copy.
  */
 
-const NST_TEAL = '#01696F';
+// PDF brand colors mirror the on-screen design tokens in src/styles/tokens.css.
+// jsPDF doesn't read CSS, so these are duplicated by hand — keep in sync.
+const NST_NAVY = '#1A2B57';
 const NST_INK = '#28251D';
 const NST_MUTED = '#7A7974';
 const NST_BORDER = '#D4D1CA';
@@ -395,7 +397,7 @@ function drawSectionHeader(doc: jsPDF, title: string, y: number): number {
   doc.setTextColor(NST_INK);
   doc.text(title, 40, y);
   // Teal underline
-  doc.setDrawColor(NST_TEAL);
+  doc.setDrawColor(NST_NAVY);
   doc.setLineWidth(1.25);
   doc.line(40, y + 4, 555, y + 4);
   return y + 18;
@@ -419,13 +421,13 @@ function drawCover(
   const pageW = doc.internal.pageSize.getWidth();
 
   // Teal bar across top
-  doc.setFillColor(NST_TEAL);
+  doc.setFillColor(NST_NAVY);
   doc.rect(0, 0, pageW, 8, 'F');
 
   // NST logo mark (text-only, brand-accurate)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(28);
-  doc.setTextColor(NST_TEAL);
+  doc.setTextColor(NST_NAVY);
   doc.text('NST', 40, 80);
 
   doc.setFont('helvetica', 'normal');
@@ -474,12 +476,12 @@ function drawCover(
   doc.text(S.cover.preparedForValue, 180, 296);
 
   // Security notice
-  doc.setDrawColor(NST_TEAL);
+  doc.setDrawColor(NST_NAVY);
   doc.setFillColor(248, 252, 252);
   doc.roundedRect(40, 360, pageW - 80, 70, 4, 4, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(NST_TEAL);
+  doc.setTextColor(NST_NAVY);
   doc.text(S.cover.securityTitle, 56, 382);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
@@ -651,7 +653,7 @@ function renderHandoff(doc: jsPDF, ctx: HandoffContext): void {
         ]),
         theme: 'striped',
         headStyles: {
-          fillColor: NST_TEAL,
+          fillColor: NST_NAVY,
           textColor: '#FFFFFF',
           fontStyle: 'bold',
         },
