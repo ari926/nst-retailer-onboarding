@@ -212,7 +212,7 @@ export default function Step7FirstPickup() {
           {!deferred && (
             <>
               <div className="field">
-                <label htmlFor="preferredDate" className="field-label">
+                <label htmlFor="preferredDate" className="field-label field-required">
                   {t('step_7_launch.fields.preferred_date')}
                 </label>
                 <input
@@ -230,7 +230,7 @@ export default function Step7FirstPickup() {
               </div>
 
               <div className="field">
-                <span className="field-label">
+                <span className="field-label field-required">
                   {t('step_7_launch.fields.service_days')}
                 </span>
                 <div className="chip-row">
@@ -255,7 +255,7 @@ export default function Step7FirstPickup() {
 
               <div className="field-row">
                 <div className="field">
-                  <label htmlFor="frequency" className="field-label">
+                  <label htmlFor="frequency" className="field-label field-required">
                     {t('step_7_launch.fields.frequency')}
                   </label>
                   <select
@@ -280,7 +280,7 @@ export default function Step7FirstPickup() {
                 </div>
 
                 <div className="field">
-                  <label htmlFor="timeWindow" className="field-label">
+                  <label htmlFor="timeWindow" className="field-label field-required">
                     {t('step_7_launch.fields.time_window')}
                   </label>
                   <select

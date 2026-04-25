@@ -40,8 +40,12 @@ export default function Step4Deposit() {
     [sfdcAccountId],
   );
 
+  // Schema input (form-state) and output (validated) types differ because of
+  // empty-string-tolerant numeric fields. RHF only models one. Cast the
+  // resolver to satisfy the output-typed generic; values are coerced on submit.
   const methods = useForm<Step4Values>({
-    resolver: zodResolver(step4Schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(step4Schema) as any,
     defaultValues: step4Defaults,
     mode: 'onBlur',
   });

@@ -34,8 +34,12 @@ export default function Step5ChangeOrder() {
   const [submitting, setSubmitting] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
 
+  // Schema input (form-state) and output (validated) types differ because of
+  // empty-string-tolerant numeric fields. RHF only models one. Cast the
+  // resolver to satisfy the output-typed generic; values are coerced on submit.
   const methods = useForm<Step5Values>({
-    resolver: zodResolver(step5Schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(step5Schema) as any,
     defaultValues: step5Defaults,
     mode: 'onBlur',
   });

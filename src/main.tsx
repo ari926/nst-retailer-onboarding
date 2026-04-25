@@ -7,6 +7,29 @@ import App from './App';
 import './lib/i18n';
 import './styles/index.css';
 
+// Auto-seed a mock user for preview builds so reviewers skip the claim/MFA flow.
+// Only runs when VITE_MOCK_AUTH=true and no user is already stored.
+if (import.meta.env.VITE_MOCK_AUTH === 'true') {
+  try {
+    if (!localStorage.getItem('nst_mock_user')) {
+      localStorage.setItem(
+        'nst_mock_user',
+        JSON.stringify({
+          id: 'mock-preview-user',
+          email: 'preview@talaria.com',
+          _mock: true,
+          user_metadata: {
+            sfdc_account_id: 'SFDC-PREVIEW-001',
+            first_name: 'Preview',
+          },
+        }),
+      );
+    }
+  } catch {
+    // localStorage unavailable — fall through to regular flow
+  }
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

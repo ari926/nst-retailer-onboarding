@@ -13,8 +13,13 @@ import { STEPS } from '../../types/onboarding';
  */
 export function AppLayout() {
   const locked = useOnboardingStore((s) => s.locked);
+  const completedSteps = useOnboardingStore((s) => s.completedSteps);
   const setCurrentStep = useOnboardingStore((s) => s.setCurrentStep);
   const { pathname } = useLocation();
+
+  // Once every step is complete, the org is provisioned and the "setup mode"
+  // banner becomes misleading. Hide it on the completion screen.
+  const allDone = STEPS.every((s) => completedSteps.includes(s.id));
 
   // Keep `currentStep` in sync with the URL. Without this, navigating via the
   // sidebar, browser back/forward, or a direct link leaves the header progress
@@ -39,7 +44,7 @@ export function AppLayout() {
         <Sidebar />
         <main className="app-main" id="main-content" tabIndex={-1}>
           <div className="app-main__inner">
-            {locked && <LockedBanner />}
+            {locked && !allDone && <LockedBanner />}
             <Outlet />
           </div>
         </main>

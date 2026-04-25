@@ -38,22 +38,27 @@ export function addBusinessDays(from: Date, days: number): Date {
   return d;
 }
 
+// Empty-string-tolerant non-negative integer (see Step4 schema for rationale).
+const denomCount = z
+  .union([z.literal(''), z.coerce.number().int().min(0)])
+  .transform((v) => (v === '' ? 0 : v));
+
 export const step5Schema = z
   .object({
     deliveryDate: z.string().min(1, 'Pick a delivery date'),
     // coin rolls (count = rolls; quarters roll = $10 = 40 coins)
     rolls: z.object({
-      quarters: z.coerce.number().int().min(0),
-      dimes: z.coerce.number().int().min(0),
-      nickels: z.coerce.number().int().min(0),
-      pennies: z.coerce.number().int().min(0),
+      quarters: denomCount,
+      dimes: denomCount,
+      nickels: denomCount,
+      pennies: denomCount,
     }),
     // loose bills (count = bills)
     bills: z.object({
-      singles: z.coerce.number().int().min(0),
-      fives: z.coerce.number().int().min(0),
-      tens: z.coerce.number().int().min(0),
-      twenties: z.coerce.number().int().min(0),
+      singles: denomCount,
+      fives: denomCount,
+      tens: denomCount,
+      twenties: denomCount,
     }),
     notes: z.string().optional(),
   })
@@ -93,9 +98,13 @@ export const ROLL_COUNTS: Record<CoinKey, number> = {
   pennies: 50, // $0.50 roll
 };
 
-export const step5Defaults: Step5Values = {
+// Form holds in-progress strings; schema coerces on submit (see Step4 for the
+// same pattern). Defaults are widened to `any` so the empty-string in-progress
+// state typechecks against RHF's defaultValues prop.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const step5Defaults: any = {
   deliveryDate: '',
-  rolls: { quarters: 0, dimes: 0, nickels: 0, pennies: 0 },
-  bills: { singles: 0, fives: 0, tens: 0, twenties: 0 },
+  rolls: { quarters: '', dimes: '', nickels: '', pennies: '' },
+  bills: { singles: '', fives: '', tens: '', twenties: '' },
   notes: '',
 };

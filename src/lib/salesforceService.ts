@@ -79,14 +79,17 @@ function summarize(rows: StepSyncRow[]): SfSyncSummary {
 export async function getSyncStatus(
   accountId: string | null,
 ): Promise<SfSyncSummary> {
-  if (!accountId) {
-    return { rows: [], allSynced: false, hasFailures: false, inProgress: false };
-  }
-
+  // Mock mode reads from localStorage and works without an account id —
+  // the demo flow doesn't have a real SF account but step submissions still
+  // record fake sync rows so the UI can show progress through to "synced".
   if (MOCK_AUTH_ENABLED) {
     const raw = localStorage.getItem(MOCK_SYNC_KEY);
     const map: Record<string, StepSyncRow> = raw ? JSON.parse(raw) : {};
     return summarize(Object.values(map));
+  }
+
+  if (!accountId) {
+    return { rows: [], allSynced: false, hasFailures: false, inProgress: false };
   }
 
   const { data, error } = await supabase.rpc('sf_sync_status_summary', {

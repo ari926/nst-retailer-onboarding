@@ -56,8 +56,18 @@ export default function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        {/* Public */}
-        <Route path="/" element={<Home />} />
+        {/* Public — in mock-auth preview builds, skip the marketing/claim page
+            entirely and drop reviewers straight into the onboarding flow. */}
+        <Route
+          path="/"
+          element={
+            import.meta.env.VITE_MOCK_AUTH === 'true' ? (
+              <Navigate to="/onboarding" replace />
+            ) : (
+              <Home />
+            )
+          }
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/claim" element={<Claim />} />
 

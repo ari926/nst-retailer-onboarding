@@ -237,7 +237,7 @@ export default function Step6Invoicing() {
 
           <div className="field-row">
             <div className="field">
-              <label htmlFor="contactName" className="field-label">
+              <label htmlFor="contactName" className="field-label field-required">
                 {t('step_6_invoicing.fields.contact_name')}
               </label>
               <input
@@ -255,7 +255,7 @@ export default function Step6Invoicing() {
             </div>
 
             <div className="field">
-              <label htmlFor="contactEmail" className="field-label">
+              <label htmlFor="contactEmail" className="field-label field-required">
                 {t('step_6_invoicing.fields.contact_email')}
               </label>
               <input

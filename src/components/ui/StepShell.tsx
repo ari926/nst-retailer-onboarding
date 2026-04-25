@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import type { StepId } from '../../types/onboarding';
 import { STEPS } from '../../types/onboarding';
+import { useOnboardingStore } from '../../stores/onboardingStore';
+
+const MOCK_AUTH = import.meta.env.VITE_MOCK_AUTH === 'true';
 
 /**
  * Shared wrapper for every real step form.
@@ -32,6 +35,19 @@ export function StepShell({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const prev = STEPS.find((s) => s.id === stepId - 1);
+  const next = STEPS.find((s) => s.id === stepId + 1);
+  const markStepCompleted = useOnboardingStore((s) => s.markStepCompleted);
+  const setCurrentStep = useOnboardingStore((s) => s.setCurrentStep);
+
+  const handleSkip = () => {
+    markStepCompleted(stepId);
+    if (next) {
+      setCurrentStep(next.id);
+      navigate(next.path);
+    } else {
+      navigate('/onboarding');
+    }
+  };
 
   const handleBack = () => {
     if (onBack) return onBack();
@@ -58,6 +74,16 @@ export function StepShell({
           </button>
         </div>
         <div className="step-footer__actions">
+          {MOCK_AUTH && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleSkip}
+              title="Preview only: marks step complete and moves on"
+            >
+              Skip (preview)
+            </button>
+          )}
           <button type="submit" form="step-form" className="btn btn-primary" disabled={submitting}>
             {submitting ? <span className="spinner" aria-hidden /> : t(submitLabelKey)}
           </button>
