@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Safe_Type__c</fullName>
+    <description>Operational class of the safe.</description>
+    <label>Safe Type</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+                <value><fullName>Smart Safe</fullName><default>false</default><label>Smart Safe</label></value>
+                <value><fullName>Drop Safe</fullName><default>false</default><label>Drop Safe</label></value>
+                <value><fullName>Combo</fullName><default>false</default><label>Combo</label></value>
+                <value><fullName>Time-delay</fullName><default>false</default><label>Time-delay</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Hours_of_Operation_JSON__c</fullName>
+    <description>Stringified JSON of weekly hours. Format: {"mon":{"open":"08:00","close":"22:00","closed":false},...}. Single field instead of 14 (mon_open, mon_close, etc.) — same pattern as NAMSYS_Customer_Name_Grouping__c.</description>
+    <label>Hours of Operation (JSON)</label>
+    <length>32768</length>
+    <required>false</required>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

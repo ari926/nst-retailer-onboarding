@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Pickup_Window__c</fullName>
+    <description>Preferred time-of-day window for pickup. Pairs with Pick_up_frequency__c (which already exists).</description>
+    <label>Pickup Window</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>Morning</fullName><default>false</default><label>Morning (6a-12p)</label></value>
+            <value><fullName>Afternoon</fullName><default>false</default><label>Afternoon (12p-5p)</label></value>
+            <value><fullName>Evening</fullName><default>false</default><label>Evening (5p-10p)</label></value>
+            <value><fullName>Overnight</fullName><default>false</default><label>Overnight (10p-6a)</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

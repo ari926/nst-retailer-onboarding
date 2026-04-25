@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Store_Type__c</fullName>
+    <description>Retail format classification. Used by ops for route planning and driver expectations.</description>
+    <label>Store Type</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>false</restricted>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value><fullName>Convenience</fullName><default>false</default><label>Convenience</label></value>
+            <value><fullName>Grocery</fullName><default>false</default><label>Grocery</label></value>
+            <value><fullName>Pharmacy</fullName><default>false</default><label>Pharmacy</label></value>
+            <value><fullName>QSR</fullName><default>false</default><label>QSR / Restaurant</label></value>
+            <value><fullName>Big Box</fullName><default>false</default><label>Big Box</label></value>
+            <value><fullName>Specialty</fullName><default>false</default><label>Specialty</label></value>
+            <value><fullName>Other</fullName><default>false</default><label>Other</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Account.NST_Temp_Code__c</members>
+        <members>Account.Onboarding_Status__c</members>
+        <members>Account.Launch_Date__c</members>
+        <members>Account.Hours_of_Operation_JSON__c</members>
+        <members>Account.Timezone__c</members>
+        <members>Account.Store_Type__c</members>
+        <members>Account.Loading_Dock_Notes__c</members>
+        <members>Account.Bank_Account_Last4__c</members>
+        <members>Account.Voided_Check_URL__c</members>
+        <members>Account.Pickup_Window__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>Safe_Setup__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>Safe_Setup__c</members>
+        <name>CustomTab</name>
+    </types>
+    <types>
+        <members>NST_Onboarding</members>
+        <name>PermissionSet</name>
+    </types>
+    <version>60.0</version>
+</Package>

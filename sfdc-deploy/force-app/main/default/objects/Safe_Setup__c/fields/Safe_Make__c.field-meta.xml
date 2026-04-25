@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Safe_Make__c</fullName>
+    <description>Manufacturer of the safe.</description>
+    <label>Safe Make</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>false</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+                <value><fullName>American Security</fullName><default>false</default><label>American Security</label></value>
+                <value><fullName>Tidel</fullName><default>false</default><label>Tidel</label></value>
+                <value><fullName>FireKing</fullName><default>false</default><label>FireKing</label></value>
+                <value><fullName>SentrySafe</fullName><default>false</default><label>SentrySafe</label></value>
+                <value><fullName>Other</fullName><default>false</default><label>Other</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
