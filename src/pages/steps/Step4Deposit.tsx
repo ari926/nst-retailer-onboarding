@@ -79,14 +79,14 @@ export default function Step4Deposit() {
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
 
+  // Subscribe to each denomination field individually so RHF emits a re-render
+  // on every keystroke. `watch('denominations')` returns the same object
+  // reference and `useMemo` would never recompute the total.
   const denomValues = watch('denominations');
-  const calculatedTotal = useMemo(() => {
-    if (!denomValues) return 0;
-    return DENOMINATIONS.reduce(
-      (sum, d) => sum + (Number(denomValues[d.key]) || 0) * d.value,
-      0,
-    );
-  }, [denomValues]);
+  const calculatedTotal = DENOMINATIONS.reduce(
+    (sum, d) => sum + (Number(denomValues?.[d.key]) || 0) * d.value,
+    0,
+  );
 
   const onSubmit = async (values: Step4Values) => {
     setSubmitting(true);
