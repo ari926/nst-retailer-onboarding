@@ -217,6 +217,148 @@ function splitName(fullName: string): { firstName: string; lastName: string } {
   return { firstName, lastName };
 }
 
+// ---- Payload normalizers (app-shape -> SF-shape) ---------------------------
+//
+// The frontend persists step submissions verbatim from the React forms.
+// Field names there reflect product/UX needs (e.g. primaryContact, bohManager,
+// accessNotes), not Salesforce schema. Each normalizer maps from one app
+// payload shape to the SF-shaped payload that buildSfOperations consumes.
+//
+// Keep these PURE — no SF calls, no I/O. They only reshape the object.
+// Anything missing from the app form should map to undefined so that PATCHes
+// don't accidentally null-out existing SF data.
+
+const US_STATE_TO_TZ: Record<string, string> = {
+  AL: 'America/Chicago', AK: 'America/Anchorage', AZ: 'America/Phoenix',
+  AR: 'America/Chicago', CA: 'America/Los_Angeles', CO: 'America/Denver',
+  CT: 'America/New_York', DE: 'America/New_York', DC: 'America/New_York',
+  FL: 'America/New_York', GA: 'America/New_York', HI: 'Pacific/Honolulu',
+  ID: 'America/Boise', IL: 'America/Chicago', IN: 'America/Indiana/Indianapolis',
+  IA: 'America/Chicago', KS: 'America/Chicago', KY: 'America/New_York',
+  LA: 'America/Chicago', ME: 'America/New_York', MD: 'America/New_York',
+  MA: 'America/New_York', MI: 'America/Detroit', MN: 'America/Chicago',
+  MS: 'America/Chicago', MO: 'America/Chicago', MT: 'America/Denver',
+  NE: 'America/Chicago', NV: 'America/Los_Angeles', NH: 'America/New_York',
+  NJ: 'America/New_York', NM: 'America/Denver', NY: 'America/New_York',
+  NC: 'America/New_York', ND: 'America/Chicago', OH: 'America/New_York',
+  OK: 'America/Chicago', OR: 'America/Los_Angeles', PA: 'America/New_York',
+  RI: 'America/New_York', SC: 'America/New_York', SD: 'America/Chicago',
+  TN: 'America/Chicago', TX: 'America/Chicago', UT: 'America/Denver',
+  VT: 'America/New_York', VA: 'America/New_York', WA: 'America/Los_Angeles',
+  WV: 'America/New_York', WI: 'America/Chicago', WY: 'America/Denver',
+  PR: 'America/Puerto_Rico', VI: 'America/St_Thomas', GU: 'Pacific/Guam',
+  AS: 'Pacific/Pago_Pago', MP: 'Pacific/Saipan',
+};
+
+/**
+ * Step 1 — Profile.
+ * App shape: legalName, storefrontName, street, suite, city, state, zip,
+ *   hours, accessNotes, primaryContact{name,email,phone}, bohManager{name,email,phone}.
+ */
+function normalizeStep1(p: any) {
+  return {
+    // Account.Name = the legal entity. Storefront name lives in DBA__c if needed.
+    storefrontName: p.legalName ?? p.storefrontName,
+    hours: p.hours,
+    timezone: p.state ? US_STATE_TO_TZ[p.state] : undefined,
+    storeType: undefined, // not collected on the form today
+    loadingDockNotes: p.accessNotes,
+    nstTempCode: undefined, // never re-PATCH the temp code; SF generated it
+    ownerContact: p.primaryContact,
+    managerContact: p.bohManager?.email ? p.bohManager : undefined,
+  };
+}
+
+/**
+ * Step 2 — Safe & keys.
+ * App shape: hasSmartSafe ('yes'|'no'), safeMake/safeModel/safeSerial,
+ *   storageMethod ('under_counter'|'drop_safe'|'vault'|'other'),
+ *   storageMethodOther, keyHolders[]. No combo/photo collected today.
+ *
+ * Maps to SF Safe_Type__c picklist values:
+ *   'Smart Safe (with bill validator)' | 'Drop Safe' | 'Combo Safe' |
+ *   'Time-Delay Safe' | 'Other'
+ */
+function normalizeStep2(p: any) {
+  let safeType: string | undefined;
+  if (p.hasSmartSafe === 'yes') {
+    safeType = 'Smart Safe (with bill validator)';
+  } else if (p.hasSmartSafe === 'no') {
+    safeType = p.storageMethod === 'drop_safe' ? 'Drop Safe' : 'Other';
+  }
+
+  return {
+    safeMake: p.safeMake,
+    safeModel: p.safeModel,
+    safeSerial: p.safeSerial,
+    safeType,
+    keyHoldersCount: Array.isArray(p.keyHolders) ? p.keyHolders.length : undefined,
+    backupKeyLocation: undefined, // not collected; key locations live per-holder
+    safePhotoUrl: undefined,
+    comboLast4: undefined, // not collected
+  };
+}
+
+/**
+ * Step 3 — Banking.
+ * App shape: source, bankName, accountLast4, routingNumber, signerName,
+ *   matches, mismatchNotes. Routing # never leaves our vault.
+ */
+function normalizeStep3(p: any) {
+  return {
+    accountLast4: p.accountLast4,
+    voidedCheckUrl: undefined, // app does not currently capture an upload URL
+  };
+}
+
+/** Step 6 — Invoicing contact. App shape: contactName, contactEmail, sendSample. */
+function normalizeStep6(p: any) {
+  return {
+    contactName: p.contactName,
+    contactEmail: p.contactEmail,
+    contactPhone: undefined, // not collected on the form today
+  };
+}
+
+/**
+ * Step 7 — First pickup.
+ * App shape: deferred, preferredDate, serviceDays[], timeWindow, frequency, driverNotes.
+ * Concatenate days/window/frequency into a single Pickup_Window__c string.
+ */
+function normalizeStep7(p: any) {
+  let pickupWindow: string | undefined;
+  if (!p.deferred) {
+    const parts: string[] = [];
+    if (p.preferredDate) parts.push(`first=${p.preferredDate}`);
+    if (Array.isArray(p.serviceDays) && p.serviceDays.length > 0) {
+      parts.push(`days=${p.serviceDays.join(',')}`);
+    }
+    if (p.timeWindow) parts.push(`window=${p.timeWindow}`);
+    if (p.frequency) parts.push(`freq=${p.frequency}`);
+    pickupWindow = parts.length > 0 ? parts.join('; ') : undefined;
+  } else {
+    pickupWindow = 'deferred';
+  }
+
+  return {
+    pickupWindow,
+    driverNotes: p.driverNotes,
+  };
+}
+
+function normalizePayload(stepId: StepId, payload: any): any {
+  switch (stepId) {
+    case 1: return normalizeStep1(payload);
+    case 2: return normalizeStep2(payload);
+    case 3: return normalizeStep3(payload);
+    case 4: return payload;
+    case 5: return payload;
+    case 6: return normalizeStep6(payload);
+    case 7: return normalizeStep7(payload);
+    default: return payload;
+  }
+}
+
 // ---- Per-step SF operation descriptors -------------------------------------
 
 /**
@@ -452,6 +594,42 @@ function buildSfOperations(
 
 Deno.serve(async (req) => {
   const startedAt = Date.now();
+
+  // Connectivity probe: POST { mode: 'ping' } verifies SF auth + token without
+  // touching the queue. Used by smoke tests / health checks. Safe to call any time.
+  let mode: string | undefined;
+  if (req.method === 'POST') {
+    try {
+      const body = await req.clone().json();
+      mode = body?.mode;
+    } catch {
+      // ignore: empty body or non-JSON is fine for non-ping invocations
+    }
+  }
+  if (mode === 'ping') {
+    try {
+      const token = await getSalesforceAccessToken();
+      const describeOk = await sfRequest(token, 'GET', '/sobjects/Account/describe')
+        .then(() => true)
+        .catch(() => false);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          instance_url: token.instance_url,
+          token_present: !!token.access_token,
+          account_describe_ok: describeOk,
+          duration_ms: Date.now() - startedAt,
+        }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ ok: false, error: (err as Error).message }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  }
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -528,9 +706,12 @@ Deno.serve(async (req) => {
     }
 
     try {
+      // Normalize the raw app-shaped payload into the SF-shaped one
+      // that buildSfOperations expects.
+      const normalized = normalizePayload(stepId, job.payload);
       const ops = buildSfOperations(
         stepId,
-        job.payload,
+        normalized,
         job.sfdc_account_id,
         existingSfObjectId,
       );
