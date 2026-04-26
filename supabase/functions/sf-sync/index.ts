@@ -132,12 +132,20 @@ async function sfRequest(
   body?: object,
 ): Promise<any> {
   const url = `${token.instance_url}/services/data/${SF_API_VERSION}${path}`;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token.access_token}`,
+    'Content-Type': 'application/json',
+  };
+  // Bypass duplicate-rule blocks for Contact writes — our upsert logic already
+  // queries by Email+AccountId before POSTing, so any remaining "duplicate"
+  // hit is a fuzzy-name false positive (e.g. same person, different email).
+  // We've decided at the org level that the queue is the source of truth.
+  if (path.includes('/sobjects/Contact')) {
+    headers['Sforce-Duplicate-Rule-Header'] = 'allowSave=true';
+  }
   const resp = await fetch(url, {
     method,
-    headers: {
-      Authorization: `Bearer ${token.access_token}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (resp.status === 204) return null; // PATCH success with no body
@@ -323,26 +331,75 @@ function normalizeStep6(p: any) {
 /**
  * Step 7 — First pickup.
  * App shape: deferred, preferredDate, serviceDays[], timeWindow, frequency, driverNotes.
- * Concatenate days/window/frequency into a single Pickup_Window__c string.
+ *
+ * SF model:
+ *   - Pickup_Window__c: restricted picklist (Morning 6–11 / Afternoon 11–3 / Evening 3–7 / Overnight 7–6)
+ *   - Pick_up_frequency__c: restricted picklist (1x weekly / 2x weekly / EOW / Monthly)
+ *   - Service days + preferred date are concatenated into Loading_Dock_Notes__c since
+ *     SF has no day-of-week field on Account today.
  */
+const APP_TIME_WINDOW_TO_SF: Record<string, string> = {
+  morning: 'Morning (6am–11am)',
+  '6am-11am': 'Morning (6am–11am)',
+  '7am-9am': 'Morning (6am–11am)',
+  '6am_11am': 'Morning (6am–11am)',
+  afternoon: 'Afternoon (11am–3pm)',
+  '11am-3pm': 'Afternoon (11am–3pm)',
+  '11am_3pm': 'Afternoon (11am–3pm)',
+  evening: 'Evening (3pm–7pm)',
+  '3pm-7pm': 'Evening (3pm–7pm)',
+  '3pm_7pm': 'Evening (3pm–7pm)',
+  overnight: 'Overnight (7pm–6am)',
+  '7pm-6am': 'Overnight (7pm–6am)',
+  '7pm_6am': 'Overnight (7pm–6am)',
+};
+
+const APP_FREQUENCY_TO_SF: Record<string, string> = {
+  '1x_weekly': '1x weekly',
+  '1x weekly': '1x weekly',
+  weekly: '1x weekly',
+  '2x_weekly': '2x weekly',
+  '2x weekly': '2x weekly',
+  '3x_weekly': '2x weekly', // app offers 3x but SF caps at 2x; ops will adjust if needed
+  eow: 'EOW',
+  EOW: 'EOW',
+  biweekly: 'EOW',
+  monthly: 'Monthly',
+  Monthly: 'Monthly',
+};
+
 function normalizeStep7(p: any) {
-  let pickupWindow: string | undefined;
-  if (!p.deferred) {
-    const parts: string[] = [];
-    if (p.preferredDate) parts.push(`first=${p.preferredDate}`);
-    if (Array.isArray(p.serviceDays) && p.serviceDays.length > 0) {
-      parts.push(`days=${p.serviceDays.join(',')}`);
-    }
-    if (p.timeWindow) parts.push(`window=${p.timeWindow}`);
-    if (p.frequency) parts.push(`freq=${p.frequency}`);
-    pickupWindow = parts.length > 0 ? parts.join('; ') : undefined;
-  } else {
-    pickupWindow = 'deferred';
+  if (p.deferred) {
+    return {
+      pickupWindow: undefined,
+      pickupFrequency: undefined,
+      driverNotes: [
+        'Schedule deferred at onboarding',
+        p.driverNotes,
+      ].filter(Boolean).join(' — '),
+    };
   }
+
+  const pickupWindow = p.timeWindow
+    ? APP_TIME_WINDOW_TO_SF[String(p.timeWindow).toLowerCase()] ?? APP_TIME_WINDOW_TO_SF[p.timeWindow]
+    : undefined;
+  const pickupFrequency = p.frequency
+    ? APP_FREQUENCY_TO_SF[String(p.frequency).toLowerCase()] ?? APP_FREQUENCY_TO_SF[p.frequency]
+    : undefined;
+
+  // Concatenate service days + preferred date + driver notes into Loading_Dock_Notes
+  // since SF doesn't have a multi-select day-of-week field today.
+  const noteParts: string[] = [];
+  if (Array.isArray(p.serviceDays) && p.serviceDays.length > 0) {
+    noteParts.push(`Service days: ${p.serviceDays.join(', ')}`);
+  }
+  if (p.preferredDate) noteParts.push(`First pickup: ${p.preferredDate}`);
+  if (p.driverNotes) noteParts.push(p.driverNotes);
 
   return {
     pickupWindow,
-    driverNotes: p.driverNotes,
+    pickupFrequency,
+    driverNotes: noteParts.length > 0 ? noteParts.join(' — ') : undefined,
   };
 }
 
@@ -405,7 +462,7 @@ function buildSfOperations(
           Store_Type__c: payload.storeType ?? undefined,
           Loading_Dock_Notes__c: payload.loadingDockNotes ?? undefined,
           NST_Temp_Code__c: payload.nstTempCode ?? undefined,
-          Onboarding_Status__c: 'In Progress',
+          Onboarding_Status__c: 'Profile Complete',
         },
         label: 'account_patch',
         primary: true,
@@ -516,7 +573,7 @@ function buildSfOperations(
         method: 'PATCH',
         path: `/sobjects/Account/${accountId}`,
         body: {
-          Onboarding_Status__c: 'In Progress',
+          Onboarding_Status__c: 'Trained',
         },
         label: 'account_step4_flag_patch',
         primary: true,
@@ -529,7 +586,7 @@ function buildSfOperations(
         method: 'PATCH',
         path: `/sobjects/Account/${accountId}`,
         body: {
-          Onboarding_Status__c: 'In Progress',
+          Onboarding_Status__c: 'Trained',
         },
         label: 'account_step5_flag_patch',
         primary: true,
@@ -577,8 +634,9 @@ function buildSfOperations(
         path: `/sobjects/Account/${accountId}`,
         body: {
           Pickup_Window__c: payload.pickupWindow ?? undefined,
+          Pick_up_frequency__c: payload.pickupFrequency ?? undefined,
           Loading_Dock_Notes__c: payload.driverNotes ?? undefined,
-          Onboarding_Status__c: 'Complete',
+          Onboarding_Status__c: 'Awaiting Pickup',
         },
         label: 'account_pickup_complete_patch',
         primary: true,
