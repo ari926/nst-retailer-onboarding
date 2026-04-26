@@ -31,7 +31,10 @@ import { Logo } from '../components/layout/Logo';
 const claimSchema = z
   .object({
     email: z.string().email(),
-    tempCode: z.string().min(6, 'Code must be at least 6 characters'),
+    tempCode: z
+      .string()
+      .min(6, 'Code must be at least 6 characters')
+      .max(12, 'Code can be at most 12 characters'),
     newPassword: z
       .string()
       .min(12, 'Password must be at least 12 characters')

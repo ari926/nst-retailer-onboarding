@@ -132,12 +132,20 @@ async function sfRequest(
   body?: object,
 ): Promise<any> {
   const url = `${token.instance_url}/services/data/${SF_API_VERSION}${path}`;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token.access_token}`,
+    'Content-Type': 'application/json',
+  };
+  // Bypass duplicate-rule blocks for Contact writes — our upsert logic already
+  // queries by Email+AccountId before POSTing, so any remaining "duplicate"
+  // hit is a fuzzy-name false positive (e.g. same person, different email).
+  // We've decided at the org level that the queue is the source of truth.
+  if (path.includes('/sobjects/Contact')) {
+    headers['Sforce-Duplicate-Rule-Header'] = 'allowSave=true';
+  }
   const resp = await fetch(url, {
     method,
-    headers: {
-      Authorization: `Bearer ${token.access_token}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (resp.status === 204) return null; // PATCH success with no body
@@ -217,6 +225,197 @@ function splitName(fullName: string): { firstName: string; lastName: string } {
   return { firstName, lastName };
 }
 
+// ---- Payload normalizers (app-shape -> SF-shape) ---------------------------
+//
+// The frontend persists step submissions verbatim from the React forms.
+// Field names there reflect product/UX needs (e.g. primaryContact, bohManager,
+// accessNotes), not Salesforce schema. Each normalizer maps from one app
+// payload shape to the SF-shaped payload that buildSfOperations consumes.
+//
+// Keep these PURE — no SF calls, no I/O. They only reshape the object.
+// Anything missing from the app form should map to undefined so that PATCHes
+// don't accidentally null-out existing SF data.
+
+const US_STATE_TO_TZ: Record<string, string> = {
+  AL: 'America/Chicago', AK: 'America/Anchorage', AZ: 'America/Phoenix',
+  AR: 'America/Chicago', CA: 'America/Los_Angeles', CO: 'America/Denver',
+  CT: 'America/New_York', DE: 'America/New_York', DC: 'America/New_York',
+  FL: 'America/New_York', GA: 'America/New_York', HI: 'Pacific/Honolulu',
+  ID: 'America/Boise', IL: 'America/Chicago', IN: 'America/Indiana/Indianapolis',
+  IA: 'America/Chicago', KS: 'America/Chicago', KY: 'America/New_York',
+  LA: 'America/Chicago', ME: 'America/New_York', MD: 'America/New_York',
+  MA: 'America/New_York', MI: 'America/Detroit', MN: 'America/Chicago',
+  MS: 'America/Chicago', MO: 'America/Chicago', MT: 'America/Denver',
+  NE: 'America/Chicago', NV: 'America/Los_Angeles', NH: 'America/New_York',
+  NJ: 'America/New_York', NM: 'America/Denver', NY: 'America/New_York',
+  NC: 'America/New_York', ND: 'America/Chicago', OH: 'America/New_York',
+  OK: 'America/Chicago', OR: 'America/Los_Angeles', PA: 'America/New_York',
+  RI: 'America/New_York', SC: 'America/New_York', SD: 'America/Chicago',
+  TN: 'America/Chicago', TX: 'America/Chicago', UT: 'America/Denver',
+  VT: 'America/New_York', VA: 'America/New_York', WA: 'America/Los_Angeles',
+  WV: 'America/New_York', WI: 'America/Chicago', WY: 'America/Denver',
+  PR: 'America/Puerto_Rico', VI: 'America/St_Thomas', GU: 'Pacific/Guam',
+  AS: 'Pacific/Pago_Pago', MP: 'Pacific/Saipan',
+};
+
+/**
+ * Step 1 — Profile.
+ * App shape: legalName, storefrontName, street, suite, city, state, zip,
+ *   hours, accessNotes, primaryContact{name,email,phone}, bohManager{name,email,phone}.
+ */
+function normalizeStep1(p: any) {
+  return {
+    // Account.Name = the legal entity. Storefront name lives in DBA__c if needed.
+    storefrontName: p.legalName ?? p.storefrontName,
+    hours: p.hours,
+    timezone: p.state ? US_STATE_TO_TZ[p.state] : undefined,
+    storeType: undefined, // not collected on the form today
+    loadingDockNotes: p.accessNotes,
+    nstTempCode: undefined, // never re-PATCH the temp code; SF generated it
+    ownerContact: p.primaryContact,
+    managerContact: p.bohManager?.email ? p.bohManager : undefined,
+  };
+}
+
+/**
+ * Step 2 — Safe & keys.
+ * App shape: hasSmartSafe ('yes'|'no'), safeMake/safeModel/safeSerial,
+ *   storageMethod ('under_counter'|'drop_safe'|'vault'|'other'),
+ *   storageMethodOther, keyHolders[]. No combo/photo collected today.
+ *
+ * Maps to SF Safe_Type__c picklist values:
+ *   'Smart Safe (with bill validator)' | 'Drop Safe' | 'Combo Safe' |
+ *   'Time-Delay Safe' | 'Other'
+ */
+function normalizeStep2(p: any) {
+  let safeType: string | undefined;
+  if (p.hasSmartSafe === 'yes') {
+    safeType = 'Smart Safe (with bill validator)';
+  } else if (p.hasSmartSafe === 'no') {
+    safeType = p.storageMethod === 'drop_safe' ? 'Drop Safe' : 'Other';
+  }
+
+  return {
+    safeMake: p.safeMake,
+    safeModel: p.safeModel,
+    safeSerial: p.safeSerial,
+    safeType,
+    keyHoldersCount: Array.isArray(p.keyHolders) ? p.keyHolders.length : undefined,
+    backupKeyLocation: undefined, // not collected; key locations live per-holder
+    safePhotoUrl: undefined,
+    comboLast4: undefined, // not collected
+  };
+}
+
+/**
+ * Step 3 — Banking.
+ * App shape: source, bankName, accountLast4, routingNumber, signerName,
+ *   matches, mismatchNotes. Routing # never leaves our vault.
+ */
+function normalizeStep3(p: any) {
+  return {
+    accountLast4: p.accountLast4,
+    voidedCheckUrl: undefined, // app does not currently capture an upload URL
+  };
+}
+
+/** Step 6 — Invoicing contact. App shape: contactName, contactEmail, sendSample. */
+function normalizeStep6(p: any) {
+  return {
+    contactName: p.contactName,
+    contactEmail: p.contactEmail,
+    contactPhone: undefined, // not collected on the form today
+  };
+}
+
+/**
+ * Step 7 — First pickup.
+ * App shape: deferred, preferredDate, serviceDays[], timeWindow, frequency, driverNotes.
+ *
+ * SF model:
+ *   - Pickup_Window__c: restricted picklist (Morning 6–11 / Afternoon 11–3 / Evening 3–7 / Overnight 7–6)
+ *   - Pick_up_frequency__c: restricted picklist (1x weekly / 2x weekly / EOW / Monthly)
+ *   - Service days + preferred date are concatenated into Loading_Dock_Notes__c since
+ *     SF has no day-of-week field on Account today.
+ */
+const APP_TIME_WINDOW_TO_SF: Record<string, string> = {
+  morning: 'Morning (6am–11am)',
+  '6am-11am': 'Morning (6am–11am)',
+  '7am-9am': 'Morning (6am–11am)',
+  '6am_11am': 'Morning (6am–11am)',
+  afternoon: 'Afternoon (11am–3pm)',
+  '11am-3pm': 'Afternoon (11am–3pm)',
+  '11am_3pm': 'Afternoon (11am–3pm)',
+  evening: 'Evening (3pm–7pm)',
+  '3pm-7pm': 'Evening (3pm–7pm)',
+  '3pm_7pm': 'Evening (3pm–7pm)',
+  overnight: 'Overnight (7pm–6am)',
+  '7pm-6am': 'Overnight (7pm–6am)',
+  '7pm_6am': 'Overnight (7pm–6am)',
+};
+
+const APP_FREQUENCY_TO_SF: Record<string, string> = {
+  '1x_weekly': '1x weekly',
+  '1x weekly': '1x weekly',
+  weekly: '1x weekly',
+  '2x_weekly': '2x weekly',
+  '2x weekly': '2x weekly',
+  '3x_weekly': '2x weekly', // app offers 3x but SF caps at 2x; ops will adjust if needed
+  eow: 'EOW',
+  EOW: 'EOW',
+  biweekly: 'EOW',
+  monthly: 'Monthly',
+  Monthly: 'Monthly',
+};
+
+function normalizeStep7(p: any) {
+  if (p.deferred) {
+    return {
+      pickupWindow: undefined,
+      pickupFrequency: undefined,
+      driverNotes: [
+        'Schedule deferred at onboarding',
+        p.driverNotes,
+      ].filter(Boolean).join(' — '),
+    };
+  }
+
+  const pickupWindow = p.timeWindow
+    ? APP_TIME_WINDOW_TO_SF[String(p.timeWindow).toLowerCase()] ?? APP_TIME_WINDOW_TO_SF[p.timeWindow]
+    : undefined;
+  const pickupFrequency = p.frequency
+    ? APP_FREQUENCY_TO_SF[String(p.frequency).toLowerCase()] ?? APP_FREQUENCY_TO_SF[p.frequency]
+    : undefined;
+
+  // Concatenate service days + preferred date + driver notes into Loading_Dock_Notes
+  // since SF doesn't have a multi-select day-of-week field today.
+  const noteParts: string[] = [];
+  if (Array.isArray(p.serviceDays) && p.serviceDays.length > 0) {
+    noteParts.push(`Service days: ${p.serviceDays.join(', ')}`);
+  }
+  if (p.preferredDate) noteParts.push(`First pickup: ${p.preferredDate}`);
+  if (p.driverNotes) noteParts.push(p.driverNotes);
+
+  return {
+    pickupWindow,
+    pickupFrequency,
+    driverNotes: noteParts.length > 0 ? noteParts.join(' — ') : undefined,
+  };
+}
+
+function normalizePayload(stepId: StepId, payload: any): any {
+  switch (stepId) {
+    case 1: return normalizeStep1(payload);
+    case 2: return normalizeStep2(payload);
+    case 3: return normalizeStep3(payload);
+    case 4: return payload;
+    case 5: return payload;
+    case 6: return normalizeStep6(payload);
+    case 7: return normalizeStep7(payload);
+    default: return payload;
+  }
+}
+
 // ---- Per-step SF operation descriptors -------------------------------------
 
 /**
@@ -263,7 +462,7 @@ function buildSfOperations(
           Store_Type__c: payload.storeType ?? undefined,
           Loading_Dock_Notes__c: payload.loadingDockNotes ?? undefined,
           NST_Temp_Code__c: payload.nstTempCode ?? undefined,
-          Onboarding_Status__c: 'In Progress',
+          Onboarding_Status__c: 'Profile Complete',
         },
         label: 'account_patch',
         primary: true,
@@ -374,7 +573,7 @@ function buildSfOperations(
         method: 'PATCH',
         path: `/sobjects/Account/${accountId}`,
         body: {
-          Onboarding_Status__c: 'In Progress',
+          Onboarding_Status__c: 'Trained',
         },
         label: 'account_step4_flag_patch',
         primary: true,
@@ -387,7 +586,7 @@ function buildSfOperations(
         method: 'PATCH',
         path: `/sobjects/Account/${accountId}`,
         body: {
-          Onboarding_Status__c: 'In Progress',
+          Onboarding_Status__c: 'Trained',
         },
         label: 'account_step5_flag_patch',
         primary: true,
@@ -435,8 +634,9 @@ function buildSfOperations(
         path: `/sobjects/Account/${accountId}`,
         body: {
           Pickup_Window__c: payload.pickupWindow ?? undefined,
+          Pick_up_frequency__c: payload.pickupFrequency ?? undefined,
           Loading_Dock_Notes__c: payload.driverNotes ?? undefined,
-          Onboarding_Status__c: 'Complete',
+          Onboarding_Status__c: 'Awaiting Pickup',
         },
         label: 'account_pickup_complete_patch',
         primary: true,
@@ -452,6 +652,42 @@ function buildSfOperations(
 
 Deno.serve(async (req) => {
   const startedAt = Date.now();
+
+  // Connectivity probe: POST { mode: 'ping' } verifies SF auth + token without
+  // touching the queue. Used by smoke tests / health checks. Safe to call any time.
+  let mode: string | undefined;
+  if (req.method === 'POST') {
+    try {
+      const body = await req.clone().json();
+      mode = body?.mode;
+    } catch {
+      // ignore: empty body or non-JSON is fine for non-ping invocations
+    }
+  }
+  if (mode === 'ping') {
+    try {
+      const token = await getSalesforceAccessToken();
+      const describeOk = await sfRequest(token, 'GET', '/sobjects/Account/describe')
+        .then(() => true)
+        .catch(() => false);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          instance_url: token.instance_url,
+          token_present: !!token.access_token,
+          account_describe_ok: describeOk,
+          duration_ms: Date.now() - startedAt,
+        }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ ok: false, error: (err as Error).message }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  }
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -528,9 +764,12 @@ Deno.serve(async (req) => {
     }
 
     try {
+      // Normalize the raw app-shaped payload into the SF-shaped one
+      // that buildSfOperations expects.
+      const normalized = normalizePayload(stepId, job.payload);
       const ops = buildSfOperations(
         stepId,
-        job.payload,
+        normalized,
         job.sfdc_account_id,
         existingSfObjectId,
       );
