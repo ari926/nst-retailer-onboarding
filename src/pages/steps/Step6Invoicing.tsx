@@ -79,7 +79,7 @@ export default function Step6Invoicing() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const draft = await loadDraft<Step6Values>(6);
+      const draft = await loadDraft<Step6Values>(5);
       if (mounted && draft) reset(draft);
       // Show "last sent" so the retailer doesn't spam the button.
       if (sfdcAccountId) {
@@ -99,7 +99,7 @@ export default function Step6Invoicing() {
     if (!draftLoaded) return;
     const subscription = watch((values) => {
       const handle = setTimeout(() => {
-        void saveDraft(6, values);
+        void saveDraft(5, values);
       }, 1500);
       return () => clearTimeout(handle);
     });
@@ -110,7 +110,7 @@ export default function Step6Invoicing() {
     setSubmitting(true);
     setBounceReason('');
     try {
-      await submitStep(6, values);
+      await submitStep(5, values);
 
       if (values.sendSample) {
         setSampleState('sending');
@@ -132,8 +132,8 @@ export default function Step6Invoicing() {
         setSampleState('sent');
       } else {
         // No sample requested — complete and move on
-        markStepCompleted(6);
-        setCurrentStep(7);
+        markStepCompleted(5);
+        setCurrentStep(6);
         navigate('/onboarding/launch');
       }
     } catch (err) {
@@ -145,8 +145,8 @@ export default function Step6Invoicing() {
   };
 
   const acknowledgeSample = () => {
-    markStepCompleted(6);
-    setCurrentStep(7);
+    markStepCompleted(5);
+    setCurrentStep(6);
     navigate('/onboarding/launch');
   };
 
@@ -156,7 +156,7 @@ export default function Step6Invoicing() {
       <section className="stack stack-lg">
         <div className="step-header">
           <div className="step-header__eyebrow">
-            {t('nav.step_of', 'Step {current} of {total}', { current: 6, total: 7 })}
+            {t('nav.step_of', 'Step {current} of {total}', { current: 5, total: 6 })}
           </div>
           <h1>{t('step_6_invoicing.title')}</h1>
         </div>
@@ -189,7 +189,7 @@ export default function Step6Invoicing() {
     <FormProvider {...methods}>
       <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <StepShell
-          stepId={6}
+          stepId={5}
           titleKey="step_6_invoicing.title"
           subtitleKey="step_6_invoicing.subtitle"
           submitting={submitting || sampleState === 'sending'}

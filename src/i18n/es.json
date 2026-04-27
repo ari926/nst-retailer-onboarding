@@ -48,22 +48,21 @@
     "step_of": "Paso {current} de {total}",
     "step_1_short": "Perfil de tienda",
     "step_2_short": "Caja fuerte y llaves",
-    "step_3_short": "Datos bancarios",
-    "step_4_short": "Depósito de prueba",
-    "step_5_short": "Pedido de cambio de prueba",
-    "step_6_short": "Facturación",
-    "step_7_short": "Primera recolección"
+    "step_3_short": "Depósito de prueba",
+    "step_4_short": "Pedido de cambio de prueba",
+    "step_5_short": "Facturación",
+    "step_6_short": "Primera recolección"
   },
 
   "onboarding": {
     "overview_eyebrow": "Resumen de configuración",
     "welcome_title": "Vamos a configurar tu tienda.",
-    "welcome_subtitle": "Siete pasos rápidos. Puedes guardar y volver cuando quieras.",
+    "welcome_subtitle": "Seis pasos rápidos. Puedes guardar y volver cuando quieras.",
     "all_done_title": "Listo — ya puedes lanzar.",
     "all_done_subtitle": "Nuestro equipo de operaciones confirmará tu fecha de lanzamiento pronto.",
     "next_up": "Siguiente",
     "handoff": {
-      "ready_title": "Los 7 pasos enviados",
+      "ready_title": "Los 6 pasos enviados",
       "ready_sub": "Tu representante de NST está coordinando tu fecha de lanzamiento. Descarga un resumen para tus archivos — es el mismo documento que operaciones usa para configurar tu tienda.",
       "download_cta": "Descargar resumen de operaciones",
       "downloading": "Preparando PDF…",
@@ -173,21 +172,6 @@
     }
   },
 
-  "step_3_banking": {
-    "title": "Confirma los datos bancarios.",
-    "subtitle": "Extrajimos esta información automáticamente del formulario de información de efectivo que firmaste. Revísala antes de que conectemos todo.",
-    "fields": {
-      "bank_name": "Nombre del banco",
-      "account_last4": "Últimos 4 dígitos de la cuenta",
-      "routing_number": "Número de ruta (routing)",
-      "signer_name": "Nombre del firmante",
-      "match_checkbox": "Estos datos coinciden con mis registros",
-      "flag_button": "Marcar para que NST lo actualice",
-      "mismatch_notes": "Cuéntanos qué está mal"
-    },
-    "ocr_fail_banner": "No pudimos leer tu formulario automáticamente. Por favor escribe los datos de tu formulario de información de efectivo firmado."
-  },
-
   "step_4_deposit": {
     "title": "Vamos a revisar un depósito.",
     "subtitle": "Antes de tu primera recolección real, nuestro chofer necesita que ingreses un depósito en el Portal de Servicios de Efectivo. Vamos a revisar el mismo formulario aquí para que sepas exactamente qué hacer el día uno. Esto es una muestra — nada se envía en vivo.",
@@ -198,6 +182,8 @@
       "date": "Fecha del depósito",
       "bag_number": "Número de bolsa sellada",
       "bag_number_hint": "Usa TEST-{retailerId}",
+      "bag_tooltip": "El número que aparece en tu bolsa transparente, sellada y a prueba de manipulación.",
+      "bag_tooltip_aria": "¿Qué es el número de bolsa sellada?",
       "copy_button": "Copiar",
       "denominations_title": "Desglose por denominación",
       "denominations_hint": "Usa 5 billetes de $20 = $100",
@@ -220,19 +206,20 @@
     "fields": {
       "delivery_date": "Fecha de entrega",
       "delivery_date_hint": "Elige cualquier fecha al menos 2 días hábiles desde hoy",
-      "denominations_title": "Denominaciones solicitadas",
-      "denominations_hint": "Usa $50 en monedas de 25¢ ($50.00 total)",
-      "coin_rolls_heading": "Rollos de monedas",
-      "loose_bills_heading": "Billetes sueltos",
-      "rolls_column": "Rollos",
-      "count_column": "Cantidad",
+      "bundles_hint": "El pedido es solo en paquetes de billetes y cajas de monedas.",
+      "bundles_heading": "Paquetes de billetes",
+      "bundles_subhead": "Cada paquete es un monto fijo. Ingresa la cantidad de paquetes que necesitas.",
+      "bundles_column": "Paquetes",
+      "coin_boxes_heading": "Cajas de monedas",
+      "coin_boxes_subhead": "Cada caja es un monto fijo de monedas en rollos. Ingresa la cantidad de cajas que necesitas.",
+      "boxes_column": "Cajas",
+      "denomination_column": "Denominación",
       "subtotal_column": "Subtotal",
-      "roll_label": "{name} (${amount}/rollo)",
-      "bills_label": "Billetes de ${value}",
+      "bundle_label": "Billetes de ${value} · ${mult} por paquete",
+      "box_label": "{name} · ${mult} por caja",
       "coin_quarters": "Monedas de 25¢",
       "coin_dimes": "Monedas de 10¢",
       "coin_nickels": "Monedas de 5¢",
-      "coin_pennies": "Monedas de 1¢",
       "delivery_notes": "Notas de entrega (opcional)",
       "total_label": "Total calculado"
     },
@@ -297,7 +284,12 @@
         "flexible": "Flexible"
       },
       "frequency": "Frecuencia",
-      "access_notes": "Notas para el chofer"
+      "access_notes": "Notas para el chofer",
+      "pickup_contact_heading": "¿A quién contactamos el día de la recolección?",
+      "pickup_contact_subhead": "El chofer llamará a esta persona si algo no queda claro o va con retraso.",
+      "pickup_full_name": "Nombre completo",
+      "pickup_mobile_phone": "Teléfono móvil",
+      "pickup_store_phone": "Teléfono de la tienda (opcional)"
     },
     "date_too_soon_error": "Tu primera recolección debe ser al menos 10 días calendario desde hoy ({earliestDate} o después).",
     "tooltip_disabled_date": "Necesitamos al menos 10 días calendario para programar tu primera recolección.",

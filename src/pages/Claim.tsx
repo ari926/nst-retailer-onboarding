@@ -140,7 +140,7 @@ export default function Claim() {
       <div className="container" style={{ maxWidth: '520px' }}>
         <header className="stack stack-sm" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="text-muted text-sm">
-            {t('nav.step_of', 'Step {current} of {total}', { current: 0, total: 7 })}
+            {t('nav.step_of', 'Step {current} of {total}', { current: 0, total: 6 })}
           </div>
           <h1>
             {firstName

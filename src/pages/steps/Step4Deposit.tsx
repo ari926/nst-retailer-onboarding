@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Copy, Check } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
+import { Tooltip } from '../../components/ui/Tooltip';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
 import {
@@ -17,7 +18,10 @@ import {
 } from './Step4Deposit.schema';
 
 /**
- * Step 4 — Sample deposit walkthrough.
+ * Step 3 (formerly Step 4) — Sample deposit walkthrough.
+ *
+ * Banking step was removed in V2 — file name kept (Step4Deposit) for stability
+ * but step number is now 3 throughout the user-facing flow and store state.
  *
  * Training simulation: retailer enters a fake $100 deposit (5 × $20 bills)
  * so they know what fields they'll see on day 1. Calculated total updates
@@ -56,7 +60,7 @@ export default function Step4Deposit() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const draft = await loadDraft<Step4Values>(4);
+      const draft = await loadDraft<Step4Values>(3);
       if (mounted && draft) reset(draft);
       setDraftLoaded(true);
     })();
@@ -67,7 +71,7 @@ export default function Step4Deposit() {
     if (!draftLoaded) return;
     const subscription = watch((values) => {
       const handle = setTimeout(() => {
-        void saveDraft(4, values);
+        void saveDraft(3, values);
       }, 1500);
       return () => clearTimeout(handle);
     });
@@ -86,9 +90,9 @@ export default function Step4Deposit() {
   const onSubmit = async (values: Step4Values) => {
     setSubmitting(true);
     try {
-      await submitStep(4, values);
-      markStepCompleted(4);
-      setCurrentStep(5);
+      await submitStep(3, values);
+      markStepCompleted(3);
+      setCurrentStep(4);
       toast.success(t('step_4_deposit.success'));
       navigate('/onboarding/change-order');
     } catch (err) {
@@ -109,7 +113,7 @@ export default function Step4Deposit() {
     <FormProvider {...methods}>
       <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <StepShell
-          stepId={4}
+          stepId={3}
           titleKey="step_4_deposit.title"
           subtitleKey="step_4_deposit.subtitle"
           submitting={submitting}
@@ -171,6 +175,10 @@ export default function Step4Deposit() {
             <div className="field">
               <label htmlFor="bagNumber" className="field-label field-required">
                 {t('step_4_deposit.fields.bag_number')}
+                <Tooltip
+                  ariaLabel={t('step_4_deposit.fields.bag_tooltip_aria')}
+                  content={t('step_4_deposit.fields.bag_tooltip')}
+                />
               </label>
               <input
                 id="bagNumber"

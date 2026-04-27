@@ -9,6 +9,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { getPrefill } from '../../lib/onboardingToken';
+import { mapPrefillToStep2 } from '../../lib/prefillMapping';
 import {
   step2Schema,
   step2Defaults,
@@ -19,13 +21,12 @@ import {
 } from './Step2Safe.schema';
 
 /**
- * Step 2 — Safe & keys.
+ * Step 2 — Safe & keys (V2).
  *
- * Branches on "Do you have a Smart Safe?":
+ * Branches on "Is there a Smart Safe on site?":
  *   - yes -> make/model/serial + dashboard connection
- *   - no  -> storage method (with "other" freeform)
- *
- * Always collects at least one key holder and a provisional credit choice.
+ *            + key holders (≥1) + provisional credit (Yes/No)
+ *   - no  -> storage method ONLY (key holders + provisional credit hidden)
  */
 export default function Step2Safe() {
   const { t } = useTranslation();
@@ -60,7 +61,15 @@ export default function Step2Safe() {
     let mounted = true;
     (async () => {
       const draft = await loadDraft<Step2Values>(2);
-      if (mounted && draft) reset(draft);
+      if (!mounted) return;
+      if (draft) {
+        reset(draft);
+      } else {
+        const prefill = mapPrefillToStep2(getPrefill());
+        if (Object.keys(prefill).length > 0) {
+          reset({ ...step2Defaults, ...prefill });
+        }
+      }
       setDraftLoaded(true);
     })();
     return () => { mounted = false; };
@@ -80,11 +89,30 @@ export default function Step2Safe() {
   const onSubmit = async (values: Step2Values) => {
     setSubmitting(true);
     try {
-      await submitStep(2, values);
+      // Strip irrelevant branch fields before persisting so the server
+      // payload matches whichever path the retailer chose.
+      const sanitized: Step2Values =
+        values.hasSmartSafe === 'yes'
+          ? {
+              ...values,
+              storageMethod: undefined,
+              storageMethodOther: '',
+            }
+          : {
+              ...values,
+              safeMake: '',
+              safeModel: '',
+              safeSerial: '',
+              dashboardConnection: undefined,
+              keyHolders: undefined,
+              provisionalCredit: undefined,
+            };
+
+      await submitStep(2, sanitized);
       markStepCompleted(2);
       setCurrentStep(3);
       toast.success(t('step_2_safe.saved', 'Safe details saved.'));
-      navigate('/onboarding/banking');
+      navigate('/onboarding/deposit');
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('global.errors.generic');
       toast.error(msg);
@@ -176,10 +204,111 @@ export default function Step2Safe() {
                     </span>
                   )}
                 </div>
+
+                <hr className="divider" />
+
+                {/* Key holders — only when Smart Safe = yes */}
+                <div className="field">
+                  <h3 className="section-heading">
+                    {t('step_2_safe.fields.key_holder_section')}
+                  </h3>
+                  <div className="stack stack-md">
+                    {fields.map((field, idx) => (
+                      <div key={field.id} className="key-holder-card">
+                        <div className="grid-2">
+                          <div className="field">
+                            <label
+                              htmlFor={`kh-name-${idx}`}
+                              className="field-label field-required"
+                            >
+                              {t('step_2_safe.fields.key_holder_name')}
+                            </label>
+                            <input
+                              id={`kh-name-${idx}`}
+                              className="input"
+                              {...register(`keyHolders.${idx}.name` as const)}
+                            />
+                            {errors.keyHolders?.[idx]?.name && (
+                              <span className="field-error">
+                                {errors.keyHolders[idx]?.name?.message as string}
+                              </span>
+                            )}
+                          </div>
+                          <div className="field">
+                            <label htmlFor={`kh-role-${idx}`} className="field-label">
+                              {t('step_2_safe.fields.key_holder_role')}
+                            </label>
+                            <input
+                              id={`kh-role-${idx}`}
+                              className="input"
+                              {...register(`keyHolders.${idx}.role` as const)}
+                            />
+                          </div>
+                        </div>
+                        <div className="field">
+                          <label
+                            htmlFor={`kh-loc-${idx}`}
+                            className="field-label field-required"
+                          >
+                            {t('step_2_safe.fields.key_holder_location')}
+                          </label>
+                          <input
+                            id={`kh-loc-${idx}`}
+                            className="input"
+                            {...register(`keyHolders.${idx}.location` as const)}
+                          />
+                          {errors.keyHolders?.[idx]?.location && (
+                            <span className="field-error">
+                              {errors.keyHolders[idx]?.location?.message as string}
+                            </span>
+                          )}
+                        </div>
+                        {fields.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn-ghost btn-ghost--danger"
+                            onClick={() => remove(idx)}
+                          >
+                            <Trash2 size={14} aria-hidden /> Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => append({ name: '', role: '', location: '' })}
+                  >
+                    <Plus size={14} aria-hidden /> {t('step_2_safe.fields.add_key_holder')}
+                  </button>
+                </div>
+
+                <hr className="divider" />
+
+                {/* Provisional credit — only when Smart Safe = yes */}
+                <div className="field">
+                  <label className="field-label field-required">
+                    {t('step_2_safe.fields.provisional_credit_question')}
+                  </label>
+                  <div className="radio-col">
+                    {PROVISIONAL_OPTIONS.map((opt) => (
+                      <label key={opt} className="radio-option">
+                        <input type="radio" value={opt} {...register('provisionalCredit')} />
+                        <span>{t(`step_2_safe.fields.provisional_options.${opt}`)}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.provisionalCredit && (
+                    <span className="field-error">
+                      {errors.provisionalCredit.message as string}
+                    </span>
+                  )}
+                </div>
               </>
             )}
 
-            {/* No-smart-safe branch */}
+            {/* No-smart-safe branch — storage method ONLY */}
             {hasSmartSafe === 'no' && (
               <>
                 <hr className="divider" />
@@ -216,107 +345,6 @@ export default function Step2Safe() {
                 )}
               </>
             )}
-
-            <hr className="divider" />
-
-            {/* Key holders (field array) */}
-            <div className="field">
-              <h3 className="section-heading">
-                {t('step_2_safe.fields.key_holder_section')}
-              </h3>
-              <div className="stack stack-md">
-                {fields.map((field, idx) => (
-                  <div key={field.id} className="key-holder-card">
-                    <div className="grid-2">
-                      <div className="field">
-                        <label
-                          htmlFor={`kh-name-${idx}`}
-                          className="field-label field-required"
-                        >
-                          {t('step_2_safe.fields.key_holder_name')}
-                        </label>
-                        <input
-                          id={`kh-name-${idx}`}
-                          className="input"
-                          {...register(`keyHolders.${idx}.name` as const)}
-                        />
-                        {errors.keyHolders?.[idx]?.name && (
-                          <span className="field-error">
-                            {errors.keyHolders[idx]?.name?.message as string}
-                          </span>
-                        )}
-                      </div>
-                      <div className="field">
-                        <label htmlFor={`kh-role-${idx}`} className="field-label">
-                          {t('step_2_safe.fields.key_holder_role')}
-                        </label>
-                        <input
-                          id={`kh-role-${idx}`}
-                          className="input"
-                          {...register(`keyHolders.${idx}.role` as const)}
-                        />
-                      </div>
-                    </div>
-                    <div className="field">
-                      <label
-                        htmlFor={`kh-loc-${idx}`}
-                        className="field-label field-required"
-                      >
-                        {t('step_2_safe.fields.key_holder_location')}
-                      </label>
-                      <input
-                        id={`kh-loc-${idx}`}
-                        className="input"
-                        {...register(`keyHolders.${idx}.location` as const)}
-                      />
-                      {errors.keyHolders?.[idx]?.location && (
-                        <span className="field-error">
-                          {errors.keyHolders[idx]?.location?.message as string}
-                        </span>
-                      )}
-                    </div>
-                    {fields.length > 1 && (
-                      <button
-                        type="button"
-                        className="btn-ghost btn-ghost--danger"
-                        onClick={() => remove(idx)}
-                      >
-                        <Trash2 size={14} aria-hidden /> Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => append({ name: '', role: '', location: '' })}
-              >
-                <Plus size={14} aria-hidden /> {t('step_2_safe.fields.add_key_holder')}
-              </button>
-            </div>
-
-            <hr className="divider" />
-
-            {/* Provisional credit */}
-            <div className="field">
-              <label className="field-label field-required">
-                {t('step_2_safe.fields.provisional_credit_question')}
-              </label>
-              <div className="radio-col">
-                {PROVISIONAL_OPTIONS.map((opt) => (
-                  <label key={opt} className="radio-option">
-                    <input type="radio" value={opt} {...register('provisionalCredit')} />
-                    <span>{t(`step_2_safe.fields.provisional_options.${opt}`)}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.provisionalCredit && (
-                <span className="field-error">
-                  {errors.provisionalCredit.message as string}
-                </span>
-              )}
-            </div>
           </div>
         </StepShell>
       </form>

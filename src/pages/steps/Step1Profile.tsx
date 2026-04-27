@@ -9,6 +9,8 @@ import { StepShell } from '../../components/ui/StepShell';
 import { HoursGrid } from '../../components/steps/HoursGrid';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { getPrefill } from '../../lib/onboardingToken';
+import { mapPrefillToStep1 } from '../../lib/prefillMapping';
 import {
   step1Schema,
   step1Defaults,
@@ -42,12 +44,28 @@ export default function Step1Profile() {
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = methods;
 
-  // Load draft once on mount
+  // Load draft once on mount; if no draft exists, merge SFDC prefill into defaults.
   useEffect(() => {
     let mounted = true;
     (async () => {
       const draft = await loadDraft<Step1Values>(1);
-      if (mounted && draft) reset(draft);
+      if (!mounted) return;
+      if (draft) {
+        reset(draft);
+      } else {
+        const prefill = mapPrefillToStep1(getPrefill());
+        if (Object.keys(prefill).length > 0) {
+          reset({
+            ...step1Defaults,
+            ...prefill,
+            primaryContact: {
+              ...step1Defaults.primaryContact,
+              ...(prefill.primaryContact ?? {}),
+            },
+            hours: prefill.hours ?? step1Defaults.hours,
+          });
+        }
+      }
       setDraftLoaded(true);
     })();
     return () => { mounted = false; };
