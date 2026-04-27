@@ -17,32 +17,33 @@ test.describe('Onboarding flow — structure (V2, 6 steps)', () => {
     await seedMockAuth(page);
   });
 
-  test('progress bar advances correctly as steps complete', async ({ page }) => {
-    // 0/6 done
+  test('progress bar shows 0% with no steps completed', async ({ page }) => {
     await seedOnboardingState(page, {
       storefrontName: 'Corner Bodega',
       currentStep: 1,
       completedSteps: [0],
     });
-    await page.goto('/onboarding');
+    await page.goto('/#/onboarding');
     await expect(page.locator('.progress__label')).toContainText(/0% to launch/);
+  });
 
-    // 3/6 done
+  test('progress bar shows 50% halfway through', async ({ page }) => {
     await seedOnboardingState(page, {
       storefrontName: 'Corner Bodega',
       currentStep: 4,
       completedSteps: [0, 1, 2, 3],
     });
-    await page.goto('/onboarding');
+    await page.goto('/#/onboarding');
     await expect(page.locator('.progress__label')).toContainText(/50% to launch/);
+  });
 
-    // 6/6 done
+  test('progress bar shows 100% when all steps complete', async ({ page }) => {
     await seedOnboardingState(page, {
       storefrontName: 'Corner Bodega',
       currentStep: 6,
       completedSteps: [0, 1, 2, 3, 4, 5, 6],
     });
-    await page.goto('/onboarding');
+    await page.goto('/#/onboarding');
     await expect(page.locator('.progress__label')).toContainText(/100% to launch/);
   });
 
@@ -52,8 +53,8 @@ test.describe('Onboarding flow — structure (V2, 6 steps)', () => {
       currentStep: 3,
       completedSteps: [0, 1, 2],
     });
-    await page.goto('/onboarding/banking');
-    await expect(page).toHaveURL(/\/onboarding\/deposit$/);
+    await page.goto('/#/onboarding/banking');
+    await expect(page).toHaveURL(/#\/onboarding\/deposit$/);
   });
 
   test('locked sidebar items are not clickable', async ({ page }) => {
@@ -62,7 +63,7 @@ test.describe('Onboarding flow — structure (V2, 6 steps)', () => {
       currentStep: 3,
       completedSteps: [0, 1, 2],
     });
-    await page.goto('/onboarding/deposit');
+    await page.goto('/#/onboarding/deposit');
     // First pickup is the last step; it should be locked here.
     const lastStep = page.locator('.step-item__link', { hasText: 'First pickup' });
     await expect(lastStep).toHaveAttribute('aria-disabled', 'true');
@@ -80,7 +81,7 @@ test.describe('Smart Safe conditional logic (Step 2)', () => {
   });
 
   test('selecting Yes reveals key holders and provisional credit', async ({ page }) => {
-    await page.goto('/onboarding/safe');
+    await page.goto('/#/onboarding/safe');
     // Pick "Yes" for Smart Safe
     await page.getByLabel(/Yes/, { exact: true }).first().check();
     await expect(
@@ -92,7 +93,7 @@ test.describe('Smart Safe conditional logic (Step 2)', () => {
   });
 
   test('selecting No hides key holders and shows storage method', async ({ page }) => {
-    await page.goto('/onboarding/safe');
+    await page.goto('/#/onboarding/safe');
     await page.getByLabel(/No/, { exact: true }).first().check();
     await expect(
       page.getByText(/How is cash stored/i).first(),
@@ -113,7 +114,7 @@ test.describe('Pickup contact (Step 6) — required in both branches', () => {
   });
 
   test('shows pickup contact section in both modes', async ({ page }) => {
-    await page.goto('/onboarding/launch');
+    await page.goto('/#/onboarding/launch');
     await expect(
       page.getByText(/Who do we contact on day of pickup/i),
     ).toBeVisible();
@@ -126,11 +127,11 @@ test.describe('Pickup contact (Step 6) — required in both branches', () => {
   });
 
   test('blocks submit when pickup contact is empty (deferred branch)', async ({ page }) => {
-    await page.goto('/onboarding/launch');
+    await page.goto('/#/onboarding/launch');
     await page.getByText(/I'?m not sure yet/i).first().click();
     // Try to submit without filling pickup contact
     await page.locator('form#step-form button[type="submit"]').click();
     // Stays on the same page (validation blocks)
-    await expect(page).toHaveURL(/\/onboarding\/launch$/);
+    await expect(page).toHaveURL(/#\/onboarding\/launch$/);
   });
 });

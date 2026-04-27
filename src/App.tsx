@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Claim from './pages/Claim';
@@ -12,6 +13,20 @@ import Step6Invoicing from './pages/steps/Step6Invoicing';
 import Step7FirstPickup from './pages/steps/Step7FirstPickup';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+
+/**
+ * Hard-redirect component for the legacy /onboarding/banking route.
+ * Uses useNavigate inside an effect so the hash actually rewrites in the
+ * address bar (some browsers leave the original hash visible after a
+ * render-time <Navigate replace /> under HashRouter).
+ */
+function BankingRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate('/onboarding/deposit', { replace: true });
+  }, [navigate]);
+  return null;
+}
 
 /**
  * App router (V2 — 6 steps, banking removed).
@@ -57,10 +72,7 @@ export default function App() {
         <Route index element={<OnboardingIndex />} />
         <Route path="profile" element={<Step1Profile />} />
         <Route path="safe" element={<Step2Safe />} />
-        <Route
-          path="banking"
-          element={<Navigate to="/onboarding/deposit" replace />}
-        />
+        <Route path="banking" element={<BankingRedirect />} />
         <Route path="deposit" element={<Step4Deposit />} />
         <Route path="change-order" element={<Step5ChangeOrder />} />
         <Route path="invoicing" element={<Step6Invoicing />} />
