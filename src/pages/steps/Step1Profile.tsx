@@ -9,6 +9,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { HoursGrid } from '../../components/steps/HoursGrid';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import { getPrefill } from '../../lib/onboardingToken';
 import { mapPrefillToStep1 } from '../../lib/prefillMapping';
 import {
@@ -102,7 +103,7 @@ export default function Step1Profile() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
           stepId={1}
           titleKey="step_1_profile.title"

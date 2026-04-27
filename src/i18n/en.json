@@ -40,7 +40,9 @@
     "errors": {
       "generic": "Something went wrong. Please try again.",
       "network": "We couldn't connect. Check your internet connection.",
-      "session_expired": "Your session expired. Please sign in again."
+      "session_expired": "Your session expired. Please sign in again.",
+      "fix_one_field": "Please fix the highlighted field below before continuing.",
+      "fix_n_fields": "Please fix the {{count}} highlighted fields below before continuing."
     }
   },
 

@@ -10,6 +10,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import {
   step4Schema,
   step4Defaults,
@@ -111,7 +112,7 @@ export default function Step4Deposit() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
           stepId={3}
           titleKey="step_4_deposit.title"

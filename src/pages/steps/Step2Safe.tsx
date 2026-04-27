@@ -9,6 +9,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import { getPrefill } from '../../lib/onboardingToken';
 import { mapPrefillToStep2 } from '../../lib/prefillMapping';
 import {
@@ -123,7 +124,7 @@ export default function Step2Safe() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
           stepId={2}
           titleKey="step_2_safe.title"

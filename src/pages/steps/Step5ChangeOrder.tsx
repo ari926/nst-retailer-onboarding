@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import {
   step5Schema,
   step5Defaults,
@@ -109,7 +110,7 @@ export default function Step5ChangeOrder() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
           stepId={4}
           titleKey="step_5_change_order.title"

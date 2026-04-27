@@ -40,7 +40,9 @@
     "errors": {
       "generic": "Algo salió mal. Por favor inténtalo de nuevo.",
       "network": "No pudimos conectarnos. Revisa tu conexión a internet.",
-      "session_expired": "Tu sesión expiró. Por favor inicia sesión de nuevo."
+      "session_expired": "Tu sesión expiró. Por favor inicia sesión de nuevo.",
+      "fix_one_field": "Corrige el campo resaltado antes de continuar.",
+      "fix_n_fields": "Corrige los {{count}} campos resaltados antes de continuar."
     }
   },
 

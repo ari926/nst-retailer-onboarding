@@ -9,6 +9,7 @@ import { Mail, CheckCircle2, AlertCircle } from 'lucide-react';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import { sendSampleInvoice, getLatestSampleInvoice } from '../../lib/emailService';
 import {
   step6Schema,
@@ -187,7 +188,7 @@ export default function Step6Invoicing() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
           stepId={5}
           titleKey="step_6_invoicing.title"

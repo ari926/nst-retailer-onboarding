@@ -10,6 +10,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import {
   step7Schema,
   step7Defaults,
@@ -152,7 +153,7 @@ export default function Step7FirstPickup() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
           stepId={6}
           titleKey="step_7_launch.title"
