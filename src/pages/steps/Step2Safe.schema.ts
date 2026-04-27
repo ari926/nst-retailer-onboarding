@@ -29,15 +29,27 @@ export const step2Schema = z
     safeMake: z.string().optional(),
     safeModel: z.string().optional(),
     safeSerial: z.string().optional(),
-    dashboardConnection: z.enum(DASHBOARD_OPTIONS).optional(),
+    // Allow null because the radio group renders unselected as null;
+    // .optional() alone would emit a raw "Expected 'direct' | 'carrier'…"
+    // Zod message to the user when the field is null.
+    dashboardConnection: z
+      .enum(DASHBOARD_OPTIONS, { message: 'Required' })
+      .nullable()
+      .optional(),
 
     // No-smart-safe branch
-    storageMethod: z.enum(STORAGE_METHODS).optional(),
+    storageMethod: z
+      .enum(STORAGE_METHODS, { message: 'Required' })
+      .nullable()
+      .optional(),
     storageMethodOther: z.string().optional(),
 
     // Conditional (only when hasSmartSafe === 'yes')
     keyHolders: z.array(keyHolderSchema).optional(),
-    provisionalCredit: z.enum(PROVISIONAL_OPTIONS).optional(),
+    provisionalCredit: z
+      .enum(PROVISIONAL_OPTIONS, { message: 'Pick one' })
+      .nullable()
+      .optional(),
   })
   .superRefine((v, ctx) => {
     if (v.hasSmartSafe === 'yes') {
