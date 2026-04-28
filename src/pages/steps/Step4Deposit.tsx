@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FormProvider, useForm } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -79,14 +79,18 @@ export default function Step4Deposit() {
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
 
-  const denomValues = watch('denominations');
-  const calculatedTotal = useMemo(() => {
-    if (!denomValues) return 0;
-    return DENOMINATIONS.reduce(
-      (sum, d) => sum + (Number(denomValues[d.key]) || 0) * d.value,
-      0,
-    );
-  }, [denomValues]);
+  // useWatch (instead of watch) reliably triggers a re-render on every
+  // keystroke for nested fields, regardless of the form's `mode` setting.
+  // Previous useMemo + watch combo would sometimes return a stable object
+  // reference and skip recomputing the bottom "Calculated total".
+  const denomValues = useWatch({
+    control: methods.control,
+    name: 'denominations',
+  });
+  const calculatedTotal = DENOMINATIONS.reduce(
+    (sum, d) => sum + (Number(denomValues?.[d.key]) || 0) * d.value,
+    0,
+  );
 
   const onSubmit = async (values: Step4Values) => {
     setSubmitting(true);
@@ -215,7 +219,9 @@ export default function Step4Deposit() {
                         className="input"
                         type="number"
                         min="0"
-                        {...register(`denominations.${d.key}` as const)}
+                        {...register(`denominations.${d.key}` as const, {
+                          valueAsNumber: true,
+                        })}
                       />
                       <span className="denom-grid__subtotal">
                         ${(count * d.value).toFixed(2)}
