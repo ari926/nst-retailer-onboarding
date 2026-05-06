@@ -108,8 +108,10 @@
   },
 
   "step_1_profile": {
-    "title": "Tell us about your store.",
-    "subtitle": "This is what we print on manifests and what our drivers use to find you.",
+    "title": "Confirm your store profile",
+    "subtitle": "We pulled this from your contract. Review each card — tap Edit on anything that's wrong, then continue.",
+    "confirm_continue": "Confirm & continue",
+    "saved": "Profile saved.",
     "fields": {
       "legal_name": "Legal entity name",
       "storefront_name": "Storefront name (DBA)",

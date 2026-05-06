@@ -108,8 +108,10 @@
   },
 
   "step_1_profile": {
-    "title": "Cuéntanos sobre tu tienda.",
-    "subtitle": "Esto es lo que imprimimos en los manifiestos y lo que usan nuestros choferes para encontrarte.",
+    "title": "Confirma el perfil de tu tienda",
+    "subtitle": "Esto lo tomamos de tu contrato. Revisa cada tarjeta y pulsa Editar si algo necesita corregirse, luego continúa.",
+    "confirm_continue": "Confirmar y continuar",
+    "saved": "Perfil guardado.",
     "fields": {
       "legal_name": "Nombre legal de la entidad",
       "storefront_name": "Nombre de la tienda (DBA)",

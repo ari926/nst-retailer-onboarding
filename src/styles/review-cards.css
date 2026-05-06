@@ -1,0 +1,324 @@
+/* ----------------------------------------------------------------------------
+ * review-cards.css
+ * Step 1 v2 — "review what we have on file" UI.
+ *
+ * Cards with read-only view + flip-to-edit pattern. Lives alongside the
+ * existing components.css because the layout (kv list, person bubble,
+ * hours table) is specific to the profile review page.
+ * ------------------------------------------------------------------------- */
+
+.review-page {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.review-banner {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--nst-teal);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.review-banner svg { flex-shrink: 0; color: var(--nst-teal); }
+.review-banner strong { color: var(--text-primary); margin: 0 3px; }
+
+.review-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.review-grid .span-2 { grid-column: span 2; }
+@media (max-width: 760px) {
+  .review-grid { grid-template-columns: 1fr; }
+  .review-grid .span-2 { grid-column: auto; }
+}
+
+.review-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.review-card.editing {
+  border-color: var(--nst-teal);
+  box-shadow: var(--shadow-md);
+}
+
+.review-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface-alt, var(--neutral-100));
+}
+.review-card__icon {
+  width: 24px; height: 24px;
+  background: var(--nst-teal-faint);
+  color: var(--nst-teal);
+  border-radius: 6px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.review-card__title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin: 0;
+  flex: 1;
+}
+.review-card__badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--nst-teal-faint);
+  color: var(--nst-teal);
+  white-space: nowrap;
+}
+.review-card__badge--warn {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-bg);
+}
+.review-card__badge--neutral {
+  background: var(--neutral-200);
+  color: var(--text-secondary);
+}
+
+.review-card__edit-btn {
+  background: none;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: all .12s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.review-card__edit-btn:hover {
+  border-color: var(--nst-teal);
+  color: var(--nst-teal);
+  background: var(--nst-teal-faint);
+}
+
+.review-card__body { padding: 12px 14px 14px; }
+
+/* Read-only key/value list */
+.kv {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  column-gap: 12px;
+  row-gap: 6px;
+}
+.kv dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  padding-top: 1px;
+}
+.kv dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.kv dd .muted { color: var(--text-muted); font-weight: 400; }
+
+/* In-place edit form */
+.review-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.review-form-grid .full { grid-column: 1 / -1; }
+.review-form-grid .field { margin: 0; }
+.review-form-grid .field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.review-form-grid input,
+.review-form-grid select {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary);
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.review-form-grid input:focus,
+.review-form-grid select:focus {
+  outline: none;
+  border-color: var(--nst-teal);
+  box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.12);
+}
+
+.review-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-default);
+}
+
+/* Hours read-only table */
+.hours-table {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  column-gap: 8px;
+  row-gap: 4px;
+  font-size: 13px;
+}
+.hours-table .day { color: var(--text-muted); font-size: 12px; padding-top: 1px; }
+.hours-table .time { font-weight: 500; color: var(--text-primary); }
+.hours-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-surface-alt, var(--neutral-100));
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.hours-summary strong { color: var(--text-primary); font-weight: 600; }
+.hours-summary svg { color: var(--color-success); }
+.hours-summary__suffix {
+  color: var(--text-muted);
+  margin-left: auto;
+  font-size: 11px;
+}
+
+/* Hours edit grid */
+.hours-edit {
+  display: grid;
+  grid-template-columns: 60px auto auto auto;
+  column-gap: 8px;
+  row-gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+.hours-edit__day { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.hours-edit input[type='time'] {
+  padding: 5px 7px;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-family: inherit;
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary);
+}
+.hours-edit input[type='time']:disabled {
+  background: var(--neutral-100);
+  color: var(--text-muted);
+}
+.hours-edit input[type='checkbox'] {
+  width: 14px; height: 14px;
+  accent-color: var(--nst-teal);
+}
+.hours-edit__closed-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.quick-set {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--border-default);
+  margin-bottom: 12px;
+  align-items: center;
+}
+.quick-set__label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.chip {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-surface, #fff);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: all .12s ease;
+}
+.chip:hover {
+  border-color: var(--nst-teal);
+  color: var(--nst-teal);
+  background: var(--nst-teal-faint);
+}
+
+/* Person / contact bubble */
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--nst-teal-faint);
+  color: var(--nst-teal);
+  display: grid; place-items: center;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.person__name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.person__role {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.contact-lines {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.contact-lines > div { padding: 2px 0; }
+.contact-lines svg {
+  vertical-align: -3px;
+  margin-right: 6px;
+  color: var(--text-muted);
+}
+
+.empty-state {
+  padding: 8px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+.empty-state strong { color: var(--text-secondary); font-style: normal; }
+
+.review-hide { display: none !important; }
