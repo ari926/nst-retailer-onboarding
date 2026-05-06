@@ -58,6 +58,26 @@ export default function Step1Profile() {
 
   const ctx = useOnboardingContext(token);
 
+  // Provenance — what did SF actually return? Drives the per-card badge so
+  // we don't lie to the user with a hardcoded "On file" badge over an empty
+  // field.
+  const provenance = useMemo(() => {
+    const acct = ctx.data?.prefill?.account ?? null;
+    const contact = ctx.data?.prefill?.contact ?? null;
+    return {
+      business: !!(acct?.Name),
+      address: !!(acct?.BillingStreet || acct?.BillingCity || acct?.BillingPostalCode),
+      owner: !!(contact?.Email || contact?.FirstName),
+    };
+  }, [ctx.data]);
+
+  // "Pulled from Salesforce just now" timestamp displayed under the page
+  // subtitle. Set once when ctx.data first arrives.
+  const [pulledAt, setPulledAt] = useState<Date | null>(null);
+  useEffect(() => {
+    if (ctx.data && !pulledAt) setPulledAt(new Date());
+  }, [ctx.data, pulledAt]);
+
   const methods = useForm<Step1Values>({
     resolver: zodResolver(step1Schema),
     defaultValues: step1Defaults,
@@ -125,7 +145,7 @@ export default function Step1Profile() {
           stepId={1}
           titleKey="step_1_profile.title"
           subtitleKey="step_1_profile.subtitle"
-          submitting={submitting}
+          submitting={submitting || ctx.loading || !draftLoaded}
           submitLabelKey="step_1_profile.confirm_continue"
         >
           <div className="review-page">
@@ -146,11 +166,30 @@ export default function Step1Profile() {
               </span>
             </div>
 
+            {pulledAt && !ctx.error && (
+              <div className="review-pulled-at" aria-live="polite">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
+                </svg>
+                Pulled from Salesforce just now
+              </div>
+            )}
+            {ctx.data?.sf_warning && (
+              <div className="review-banner review-banner--warn" role="alert">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" />
+                </svg>
+                <span>
+                  We couldn't refresh from Salesforce just now. The fields below show what we last had on file — please verify carefully before continuing.
+                </span>
+              </div>
+            )}
+
             <div className="review-grid">
-              <BusinessCard editing={editing.business} setEditing={(v) => toggleEdit('business', v)} />
-              <AddressCard editing={editing.address} setEditing={(v) => toggleEdit('address', v)} />
+              <BusinessCard editing={editing.business} setEditing={(v) => toggleEdit('business', v)} onFile={provenance.business} />
+              <AddressCard editing={editing.address} setEditing={(v) => toggleEdit('address', v)} onFile={provenance.address} />
               <HoursCard editing={editing.hours} setEditing={(v) => toggleEdit('hours', v)} />
-              <OwnerCard editing={editing.owner} setEditing={(v) => toggleEdit('owner', v)} />
+              <OwnerCard editing={editing.owner} setEditing={(v) => toggleEdit('owner', v)} onFile={provenance.owner} />
               <ManagerCard editing={editing.manager} setEditing={(v) => toggleEdit('manager', v)} />
             </div>
           </div>
@@ -299,7 +338,7 @@ function ReviewCard({
  * Business card
  * ----------------------------------------------------------------------- */
 
-function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => void }) {
+function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean }) {
   const { register, watch } = useFormContext<Step1Values>();
   const legal = watch('legalName');
   const dba = watch('storefrontName');
@@ -308,7 +347,8 @@ function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => voi
       id="card-business"
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" /></svg>}
       title="Business"
-      badge="On file"
+      badge={props.onFile ? 'On file' : 'Add details'}
+      badgeVariant={props.onFile ? 'on-file' : 'optional'}
       editing={props.editing}
       setEditing={props.setEditing}
       view={
@@ -337,7 +377,7 @@ function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => voi
  * Address card
  * ----------------------------------------------------------------------- */
 
-function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void }) {
+function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean }) {
   const { register, watch } = useFormContext<Step1Values>();
   const street = watch('street');
   const suite = watch('suite');
@@ -349,7 +389,8 @@ function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void
       id="card-address"
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>}
       title="Address"
-      badge="On file"
+      badge={props.onFile ? 'On file' : 'Add details'}
+      badgeVariant={props.onFile ? 'on-file' : 'optional'}
       editing={props.editing}
       setEditing={props.setEditing}
       view={
@@ -534,7 +575,7 @@ function buildHoursSummary(hours: Step1Values['hours']) {
  * Owner / Primary contact card
  * ----------------------------------------------------------------------- */
 
-function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void }) {
+function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean }) {
   const { register, watch, formState: { errors } } = useFormContext<Step1Values>();
   const name = watch('primaryContact.name');
   const email = watch('primaryContact.email');
@@ -546,7 +587,8 @@ function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void }
       id="card-owner"
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>}
       title="Owner / Primary contact"
-      badge="On file"
+      badge={props.onFile ? 'On file' : 'Add details'}
+      badgeVariant={props.onFile ? 'on-file' : 'optional'}
       editing={props.editing}
       setEditing={props.setEditing}
       view={

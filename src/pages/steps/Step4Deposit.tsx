@@ -74,14 +74,14 @@ export default function Step4Deposit() {
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
 
+  // Inline calc — useMemo with [denomValues] deps misses nested mutations
+  // because react-hook-form mutates objects in place (same reference), so
+  // the memo dep check fails to detect updates and total stays at $0.
   const denomValues = watch('denominations');
-  const calculatedTotal = useMemo(() => {
-    if (!denomValues) return 0;
-    return DENOMINATIONS.reduce(
-      (sum, d) => sum + (Number(denomValues[d.key]) || 0) * d.value,
-      0,
-    );
-  }, [denomValues]);
+  const calculatedTotal = DENOMINATIONS.reduce(
+    (sum, d) => sum + (Number(denomValues?.[d.key]) || 0) * d.value,
+    0,
+  );
 
   const onSubmit = async (values: Step4Values) => {
     setSubmitting(true);

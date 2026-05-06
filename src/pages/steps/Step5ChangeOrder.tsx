@@ -71,17 +71,17 @@ export default function Step5ChangeOrder() {
   const rolls = watch('rolls');
   const bills = watch('bills');
 
-  const calculatedTotal = useMemo(() => {
-    const coinTotal = COIN_DENOMINATIONS.reduce((sum, d) => {
-      const count = Number(rolls?.[d.key]) || 0;
-      return sum + count * ROLL_COUNTS[d.key] * d.value;
-    }, 0);
-    const billTotal = BILL_DENOMINATIONS.reduce((sum, d) => {
-      const count = Number(bills?.[d.key]) || 0;
-      return sum + count * d.value;
-    }, 0);
-    return coinTotal + billTotal;
-  }, [rolls, bills]);
+  // Inline calc — useMemo with [rolls, bills] deps misses nested mutations
+  // because react-hook-form mutates objects in place (same reference).
+  const coinTotal = COIN_DENOMINATIONS.reduce((sum, d) => {
+    const count = Number(rolls?.[d.key]) || 0;
+    return sum + count * ROLL_COUNTS[d.key] * d.value;
+  }, 0);
+  const billTotal = BILL_DENOMINATIONS.reduce((sum, d) => {
+    const count = Number(bills?.[d.key]) || 0;
+    return sum + count * d.value;
+  }, 0);
+  const calculatedTotal = coinTotal + billTotal;
 
   const minDateStr = useMemo(() => {
     const d = addBusinessDays(new Date(), 2);
