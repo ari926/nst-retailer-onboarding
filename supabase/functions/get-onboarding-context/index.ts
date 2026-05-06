@@ -115,8 +115,17 @@ async function sfQuery(token: SfToken, soql: string): Promise<SfQueryResult> {
   return await resp.json();
 }
 
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'content-type, authorization',
+  'access-control-max-age': '86400',
+};
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return json(204, {});
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
 
   let body: { token?: string } = {};
