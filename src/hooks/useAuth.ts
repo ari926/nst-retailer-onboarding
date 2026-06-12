@@ -1,18 +1,34 @@
 import { useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import {
+  readTokenSession,
+  clearTokenSession,
+  TOKEN_SESSION_KEY,
+  type TokenSession,
+} from '../lib/tokenSession';
 
 /**
- * useAuth — wraps the Supabase session listener.
+ * useAuth — unified session source.
  *
- * In dev / scaffolding, VITE_MOCK_AUTH=true lets us bypass real Supabase auth
- * and treat any local 'nst_mock_user' localStorage entry as an authenticated user.
- * This lets the team click through the flow end-to-end before Salesforce is
- * wired up to seed real accounts (PR #11).
+ * Three flavors of "signed in":
+ *   1. Token session   — HQ-minted opaque token (`?t=<token>`) resolved via
+ *                        the resolve-token edge function. Used by both the
+ *                        customer intro-email flow and the HQ admin
+ *                        "view as customer" flow.
+ *   2. Mock session    — VITE_MOCK_AUTH=true; click-through demo mode.
+ *   3. Supabase auth   — returning user signed in with email + password.
+ *
+ * The token session is checked first so HQ admins and email-link visitors
+ * never get redirected to /login.
  */
 export interface AuthContextValue {
-  user: User | MockUser | null;
+  user: User | MockUser | TokenUser | null;
   session: Session | null;
+  /** Present when the active session is a token session (customer or admin). */
+  tokenSession: TokenSession | null;
+  /** True when source = 'admin_access' on the active token session. */
+  isAdminSession: boolean;
   loading: boolean;
   /** True when we've finished the initial hydration. */
   initialized: boolean;
@@ -23,6 +39,18 @@ interface MockUser {
   email: string;
   _mock: true;
   user_metadata: Record<string, unknown>;
+}
+
+interface TokenUser {
+  id: string;
+  email: string | null;
+  _token: true;
+  user_metadata: {
+    sfdc_account_id: string;
+    sfdc_opportunity_id: string;
+    source: 'intro_email' | 'admin_access';
+    acting_admin_email: string | null;
+  };
 }
 
 const MOCK_KEY = 'nst_mock_user';
@@ -39,52 +67,97 @@ function readMockUser(): MockUser | null {
   }
 }
 
+function tokenSessionToUser(ts: TokenSession): TokenUser {
+  return {
+    id: `token-${ts.sfdc_account_id}`,
+    email: ts.contact_email,
+    _token: true,
+    user_metadata: {
+      sfdc_account_id: ts.sfdc_account_id,
+      sfdc_opportunity_id: ts.sfdc_opportunity_id,
+      source: ts.source,
+      acting_admin_email: ts.acting_admin_email,
+    },
+  };
+}
+
 export function useAuth(): AuthContextValue {
-  const [user, setUser] = useState<User | MockUser | null>(null);
+  const [user, setUser] = useState<User | MockUser | TokenUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [tokenSession, setTokenSession] = useState<TokenSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    // Hydrate from mock first if enabled
-    const mock = readMockUser();
-    if (mock) {
-      setUser(mock);
+    // Hydrate token session first — it wins over Supabase auth and mock.
+    const ts = readTokenSession();
+    if (ts) {
+      setTokenSession(ts);
+      setUser(tokenSessionToUser(ts));
       setLoading(false);
       setInitialized(true);
-      return;
+    } else {
+      // No token session — try mock
+      const mock = readMockUser();
+      if (mock) {
+        setUser(mock);
+        setLoading(false);
+        setInitialized(true);
+      } else {
+        // Real Supabase session
+        supabase.auth.getSession().then(({ data }) => {
+          if (!mounted) return;
+          setSession(data.session);
+          setUser(data.session?.user ?? null);
+          setLoading(false);
+          setInitialized(true);
+        });
+      }
     }
 
-    // Real Supabase session
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
+    // Listen for token session changes (writes from resolveAndStoreToken or
+    // signOut). Same-tab writes dispatch a synthetic StorageEvent.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== TOKEN_SESSION_KEY) return;
+      const next = readTokenSession();
+      setTokenSession(next);
+      setUser(next ? tokenSessionToUser(next) : null);
       setInitialized(true);
-    });
+    };
+    window.addEventListener('storage', onStorage);
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, nextSession) => {
       if (!mounted) return;
+      // Don't overwrite a token session with a (likely null) Supabase session.
+      if (readTokenSession()) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
     });
 
     return () => {
       mounted = false;
+      window.removeEventListener('storage', onStorage);
       sub.subscription.unsubscribe();
     };
   }, []);
 
-  return { user, session, loading, initialized };
+  return {
+    user,
+    session,
+    tokenSession,
+    isAdminSession: tokenSession?.source === 'admin_access',
+    loading,
+    initialized,
+  };
 }
 
 /**
- * Sign out from both mock and real Supabase auth.
+ * Sign out from token session, mock, and real Supabase auth.
  */
 export async function signOut() {
+  clearTokenSession();
   localStorage.removeItem(MOCK_KEY);
   await supabase.auth.signOut();
 }

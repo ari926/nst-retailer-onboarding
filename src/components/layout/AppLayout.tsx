@@ -2,18 +2,23 @@ import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { LockedBanner } from './LockedBanner';
+import { AdminModeBanner } from './AdminModeBanner';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 
 /**
  * Two-column shell used by the /onboarding/* routes.
- * Left rail: step navigation sidebar.
- * Right rail: header + locked banner + step content (via <Outlet/>).
+ *
+ * Layout order:
+ *   AdminModeBanner (only visible when source = 'admin_access')
+ *   Header
+ *   Sidebar | LockedBanner + step content (via <Outlet/>)
  */
 export function AppLayout() {
   const locked = useOnboardingStore((s) => s.locked);
 
   return (
     <div className="app-shell">
+      <AdminModeBanner />
       <Header />
       <div className="app-body">
         <Sidebar />

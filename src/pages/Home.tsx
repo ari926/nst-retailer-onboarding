@@ -1,16 +1,24 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { mockSignIn, MOCK_AUTH_ENABLED } from '../hooks/useAuth';
 import { useOnboardingStore } from '../stores/onboardingStore';
+import { resolveAndStoreToken } from '../lib/tokenSession';
+import { SUPABASE_PROJECT_URL } from '../lib/supabase';
+
+type TokenStatus = 'idle' | 'resolving' | 'invalid' | 'expired' | 'revoked' | 'error';
 
 /**
  * Home — public landing.
  *
- * If we arrive with a kickoff token (`?t=<token>`) — the link the retailer
- * receives in their welcome email — we seed a mock session (current testing
- * mode) and redirect straight to the Step 1 review screen so they don't have
- * to re-enter info we already have on file in Salesforce.
+ * If we arrive with a kickoff token (`?t=<token>`) — either the customer's
+ * intro-email link or an HQ admin's "view as customer" link — we resolve
+ * the token via the resolve-token edge function, persist the session, and
+ * redirect into the onboarding flow.
+ *
+ * Customer tokens (source = 'intro_email') and admin tokens (source =
+ * 'admin_access') land here the same way; the difference shows up in the
+ * AdminModeBanner inside AppLayout once the session is hydrated.
  *
  * If no token is present, we show the simple landing CTA.
  */
@@ -21,22 +29,52 @@ export default function Home() {
   const setOnboarding = useOnboardingStore((s) => s.setOnboarding);
 
   const token = params.get('t');
+  const [status, setStatus] = useState<TokenStatus>(token ? 'resolving' : 'idle');
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    // Mock auth banner stays ON during testing — seed a placeholder session
-    // so ProtectedRoute lets us through. The real prefill (legal name, address,
-    // contact, etc.) is fetched server-side from Salesforce via the token in
-    // get-onboarding-context.
-    if (MOCK_AUTH_ENABLED) {
-      try {
-        mockSignIn('retailer@onboarding.local', 'TOKEN');
-      } catch {
-        // already mock-signed-in, ignore
+    let cancelled = false;
+
+    (async () => {
+      // Mock auth path — kept so existing local-dev workflows don't break.
+      if (MOCK_AUTH_ENABLED) {
+        try {
+          mockSignIn('retailer@onboarding.local', 'TOKEN');
+        } catch {
+          // already mock-signed-in, ignore
+        }
+        setOnboarding({ currentStep: 1 });
+        navigate(`/onboarding/profile?t=${encodeURIComponent(token)}`, { replace: true });
+        return;
       }
-    }
-    setOnboarding({ currentStep: 1 });
-    navigate(`/onboarding/profile?t=${encodeURIComponent(token)}`, { replace: true });
+
+      // Real path — resolve the opaque token against the portal database.
+      const result = await resolveAndStoreToken(token, SUPABASE_PROJECT_URL);
+      if (cancelled) return;
+
+      if ('error' in result) {
+        const reason = result.error;
+        if (reason === 'expired') setStatus('expired');
+        else if (reason === 'revoked') setStatus('revoked');
+        else if (reason === 'not_found') setStatus('invalid');
+        else {
+          setStatus('error');
+          setErrorDetail(reason);
+        }
+        return;
+      }
+
+      setOnboarding({
+        sfdcAccountId: result.sfdc_account_id,
+        currentStep: 1,
+      });
+      navigate(`/onboarding/profile?t=${encodeURIComponent(token)}`, { replace: true });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token, navigate, setOnboarding]);
 
   const toggleLang = () => {
@@ -45,11 +83,35 @@ export default function Home() {
   };
 
   if (token) {
-    // While the redirect runs
+    // Token landing states
+    const errorMessage =
+      status === 'expired'
+        ? t('home.token_expired', 'This onboarding link has expired. Contact your NST representative for a new one.')
+        : status === 'revoked'
+        ? t('home.token_revoked', 'This onboarding link has been revoked. Contact your NST representative.')
+        : status === 'invalid'
+        ? t('home.token_invalid', 'This onboarding link is not valid. Double-check the URL or contact NST.')
+        : status === 'error'
+        ? t('home.token_error', 'We hit a problem opening this link. Please try again in a moment.') +
+          (errorDetail ? ` (${errorDetail})` : '')
+        : null;
+
     return (
       <main style={{ minHeight: '100vh', padding: 'var(--space-8) 0' }}>
         <div className="container" style={{ maxWidth: '480px', textAlign: 'center' }}>
-          <p className="text-muted">Loading your onboarding…</p>
+          {status === 'resolving' && (
+            <p className="text-muted">{t('home.token_loading', 'Loading your onboarding…')}</p>
+          )}
+          {errorMessage && (
+            <div className="card stack stack-md">
+              <div className="banner banner-error" role="alert">
+                <span>{errorMessage}</span>
+              </div>
+              <a href="/login" className="btn btn-secondary">
+                {t('home.signin_cta', 'Sign in')}
+              </a>
+            </div>
+          )}
         </div>
       </main>
     );
