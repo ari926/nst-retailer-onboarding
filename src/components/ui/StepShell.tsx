@@ -34,19 +34,30 @@ export function StepShell({
   const navigate = useNavigate();
   const { isAdminSession } = useAuth();
   const prev = STEPS.find((s) => s.id === stepId - 1);
+  const next = STEPS.find((s) => s.id === stepId + 1);
+
+  // Preserve the ?t=<token> query param across SPA navigations so the admin
+  // session keeps hydrating on every step (react-router strips search by default).
+  const tokenParam = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('t')
+    : null;
+  const withToken = (path: string) =>
+    tokenParam ? `${path}?t=${encodeURIComponent(tokenParam)}` : path;
 
   const handleBack = () => {
     if (onBack) return onBack();
-    if (prev) navigate(prev.path);
-    else navigate('/onboarding');
+    if (prev) navigate(withToken(prev.path));
+    else navigate(withToken('/onboarding'));
   };
 
-  // In admin "view as customer" mode, the portal is intentionally read-only.
-  // Submitting steps would mutate the customer's onboarding record under the
-  // admin's identity, which we don't want without an explicit override path.
-  // We disable the submit button and surface a clear inline notice so admins
-  // aren't left wondering why nothing happened.
-  const adminReadOnly = isAdminSession;
+  // Admin "view as customer" mode: view-only walk-through. The admin can page
+  // forward and back through every step to inspect what the customer has filled
+  // in, but inputs are disabled and the submit path never fires. Forward
+  // navigation goes straight to the next step's route (no API call).
+  const isAdminPreview = isAdminSession;
+  const handleAdminNext = () => {
+    if (next) navigate(withToken(next.path));
+  };
 
   return (
     <section className="stack stack-lg">
@@ -58,9 +69,16 @@ export function StepShell({
         {subtitleKey && <p className="step-header__subtitle">{t(subtitleKey)}</p>}
       </div>
 
-      {children}
+      {/* Wrapping in a disabled fieldset makes every form input inside
+          non-editable for admin preview, without touching each step component. */}
+      <fieldset
+        disabled={isAdminPreview}
+        style={isAdminPreview ? { border: 'none', padding: 0, margin: 0, minWidth: 0 } : { border: 'none', padding: 0, margin: 0, minWidth: 0 }}
+      >
+        {children}
+      </fieldset>
 
-      {adminReadOnly && (
+      {isAdminPreview && (
         <div
           role="note"
           style={{
@@ -74,8 +92,8 @@ export function StepShell({
           }}
         >
           {t(
-            'admin_banner.read_only_step',
-            'Admin preview mode — submissions are disabled. Ask the customer to confirm this step from their portal link.',
+            'admin_banner.preview_walkthrough',
+            'Admin preview — fields are read-only. Use Next / Back to walk through the customer’s onboarding without saving any changes.',
           )}
         </div>
       )}
@@ -87,15 +105,21 @@ export function StepShell({
           </button>
         </div>
         <div className="step-footer__actions">
-          <button
-            type="submit"
-            form="step-form"
-            className="btn btn-primary"
-            disabled={submitting || adminReadOnly}
-            title={adminReadOnly ? t('admin_banner.read_only_button_tooltip', 'Disabled in admin preview mode') : undefined}
-          >
-            {submitting ? <span className="spinner" aria-hidden /> : t(submitLabelKey)}
-          </button>
+          {isAdminPreview ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleAdminNext}
+              disabled={!next}
+              title={!next ? t('admin_banner.last_step', 'Last step') : undefined}
+            >
+              {t('admin_banner.next_step', 'Next step →')}
+            </button>
+          ) : (
+            <button type="submit" form="step-form" className="btn btn-primary" disabled={submitting}>
+              {submitting ? <span className="spinner" aria-hidden /> : t(submitLabelKey)}
+            </button>
+          )}
         </div>
       </div>
     </section>
