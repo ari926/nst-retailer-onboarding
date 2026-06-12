@@ -1,0 +1,27 @@
+# Supabase Edge Functions configuration.
+#
+# Functions listed here override the platform default of `verify_jwt = true`.
+# Two cases where we disable JWT verification:
+#
+#   1. HQ→portal webhook endpoints — authenticated by HMAC signature, not JWT.
+#      Disabling JWT here lets HMAC-signed POSTs from HQ reach our verifier.
+#
+#   2. Public bootstrap endpoints — token-based bearer credential lives in the
+#      URL; we have no Supabase JWT available before the user signs in.
+
+# HQ→portal: HMAC-authenticated webhook endpoints
+[functions.mint-onboarding-token]
+verify_jwt = false
+
+[functions.validate-token]
+verify_jwt = false
+
+[functions.reopen-step]
+verify_jwt = false
+
+# Public bootstrap: called by the SPA before any auth has happened
+[functions.resolve-token]
+verify_jwt = false
+
+[functions.get-onboarding-context]
+verify_jwt = false
