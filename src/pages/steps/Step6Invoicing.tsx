@@ -66,6 +66,7 @@ export default function Step6Invoicing() {
     resolver: zodResolver(step6Schema),
     defaultValues: step6Defaults,
     mode: 'onBlur',
+    shouldUnregister: false, // keep field values when sub-editors unmount
   });
 
   const {
@@ -187,7 +188,14 @@ export default function Step6Invoicing() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        id="step-form"
+        onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.warn('[step submit] validation errors', errors);
+          toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
+        })}
+        noValidate
+      >
         <StepShell
           stepId={6}
           titleKey="step_6_invoicing.title"
