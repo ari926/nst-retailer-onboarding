@@ -43,6 +43,7 @@ export default function Step4Deposit() {
     resolver: zodResolver(step4Schema),
     defaultValues: step4Defaults,
     mode: 'onBlur',
+    shouldUnregister: false, // keep field values when sub-editors unmount
   });
 
   const {
@@ -107,7 +108,14 @@ export default function Step4Deposit() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        id="step-form"
+        onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.warn('[step submit] validation errors', errors);
+          toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
+        })}
+        noValidate
+      >
         <StepShell
           stepId={4}
           titleKey="step_4_deposit.title"

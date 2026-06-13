@@ -82,6 +82,7 @@ export default function Step1Profile() {
     resolver: zodResolver(step1Schema),
     defaultValues: step1Defaults,
     mode: 'onBlur',
+    shouldUnregister: false, // keep field values when sub-editors unmount
   });
   const { handleSubmit, watch, reset, getValues } = methods;
 
@@ -140,7 +141,14 @@ export default function Step1Profile() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        id="step-form"
+        onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.warn('[step submit] validation errors', errors);
+          toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
+        })}
+        noValidate
+      >
         <StepShell
           stepId={1}
           titleKey="step_1_profile.title"

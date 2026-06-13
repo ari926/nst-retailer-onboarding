@@ -37,6 +37,7 @@ export default function Step5ChangeOrder() {
     resolver: zodResolver(step5Schema),
     defaultValues: step5Defaults,
     mode: 'onBlur',
+    shouldUnregister: false, // keep field values when sub-editors unmount
   });
 
   const {
@@ -106,7 +107,14 @@ export default function Step5ChangeOrder() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        id="step-form"
+        onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.warn('[step submit] validation errors', errors);
+          toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
+        })}
+        noValidate
+      >
         <StepShell
           stepId={5}
           titleKey="step_5_change_order.title"

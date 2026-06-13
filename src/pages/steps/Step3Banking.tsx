@@ -40,6 +40,7 @@ export default function Step3Banking() {
     resolver: zodResolver(step3Schema),
     defaultValues: step3Defaults,
     mode: 'onBlur',
+    shouldUnregister: false, // keep field values when sub-editors unmount
   });
 
   const {
@@ -126,7 +127,14 @@ export default function Step3Banking() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        id="step-form"
+        onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.warn('[step submit] validation errors', errors);
+          toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
+        })}
+        noValidate
+      >
         <StepShell
           stepId={3}
           titleKey="step_3_banking.title"
