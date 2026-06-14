@@ -138,8 +138,21 @@ export default function Step6Invoicing() {
         navigate('/onboarding/launch');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('global.errors.generic');
-      toast.error(msg);
+      // If sendSampleInvoice threw, the sample send failed server-side.
+      // Reset sampleState so the submit button isn't stuck disabled by the
+      // `submitting || sampleState === 'sending'` guard. Surface a useful
+      // toast and let the user uncheck the sample box or retry.
+      const rawMsg = err instanceof Error ? err.message : '';
+      const isEmailFail = rawMsg.startsWith('email_failed');
+      if (isEmailFail) {
+        const reason = rawMsg.split(':')[1] || 'unknown';
+        setSampleState('bounced');
+        setBounceReason(reason);
+        toast.error(t('step_6_invoicing.bounce_error'));
+      } else {
+        setSampleState('idle');
+        toast.error(rawMsg || t('global.errors.generic'));
+      }
     } finally {
       setSubmitting(false);
     }
