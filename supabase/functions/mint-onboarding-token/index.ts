@@ -144,6 +144,51 @@ Deno.serve(async (req) => {
     return json(500, { error: 'token_insert_failed', detail: insertErr.message });
   }
 
+  // --- Provision retailer_onboardings row -----------------------------------
+  // step_submissions / step_drafts logically belong to a retailer_onboardings
+  // row keyed by (sfdc_account_id, sfdc_opportunity_id). Without this row,
+  // submit-step returns 404 onboarding_not_found and get-onboarding-context
+  // returns { onboarding: null } so the portal sits on "Loading your
+  // onboarding…" forever (or, if it does render, Confirm & continue 404s
+  // silently). Provision it here on first mint.
+  //
+  // Idempotent: ignoreDuplicates leaves any in-flight progress untouched on
+  // resend (we should never reach this branch on a token reuse anyway, since
+  // reuse hits the early-return above, but defense in depth).
+  //
+  // Non-fatal: if this errors we still return the token. HQ's email send must
+  // not be blocked by a portal-side write failure.
+  try {
+    const { error: provErr } = await supabase
+      .from('retailer_onboardings')
+      .upsert(
+        {
+          sfdc_account_id: accountId,
+          sfdc_opportunity_id: opportunityId,
+          retailer_email: contactEmail ?? null,
+          retailer_first_name: null,
+          retailer_last_name: null,
+          store_name: null,
+          language: 'en',
+          current_step: 1,
+          status: 'in_progress',
+        },
+        { onConflict: 'sfdc_account_id', ignoreDuplicates: true },
+      );
+    if (provErr) {
+      console.error(
+        '[mint-onboarding-token] retailer_onboardings provision failed',
+        provErr,
+      );
+    }
+  } catch (e) {
+    console.error(
+      '[mint-onboarding-token] retailer_onboardings provision threw',
+      e,
+    );
+  }
+  // --- end provision -------------------------------------------------------
+
   return json(200, {
     token,
     expires_at: expiresAt,
