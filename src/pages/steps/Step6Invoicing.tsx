@@ -4,64 +4,39 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Mail, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
-import { sendSampleInvoice, getLatestSampleInvoice } from '../../lib/emailService';
 import {
   step6Schema,
   step6Defaults,
   type Step6Values,
 } from './Step6Invoicing.schema';
 
-/** Tiny relative-time formatter, EN/ES via Intl. */
-function formatRelative(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.round(ms / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs} hr${hrs === 1 ? '' : 's'} ago`;
-  const days = Math.round(hrs / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-}
-
 /**
- * Step 6 — Invoicing contact + sample invoice.
+ * Step 6 — Invoicing contact + sample invoice preview.
  *
- * Captures the weekly-billing contact and (optionally) fires a sample
- * invoice email so the retailer knows what the real ones will look like.
+ * Captures the weekly-billing contact. A "Preview Sample Invoice" button
+ * opens the static sample PDF inline so the retailer can see what the
+ * real weekly invoices will look like. No email is sent from this step;
+ * the live weekly invoices are driven by the SFDC Scheduled Flow.
  *
  * Flow:
- *   1. Collect name + email + opt-in checkbox
- *   2. On submit → write contact to Supabase via submitStep(6, values)
- *   3. If sendSample=true → call emailService.sendSampleInvoice
- *      - accepted=true → confirmation state with "I got the sample" ack
- *      - accepted=false → show bounce banner, keep form editable
- *   4. Ack → navigate to /onboarding/launch
+ *   1. Collect billing contact name + email
+ *   2. (Optional) Click "Preview Sample Invoice" → opens /sample-invoice.pdf
+ *   3. On Continue → write contact to Supabase via submitStep(6, values)
+ *   4. Advance to Step 7
  */
 export default function Step6Invoicing() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const sfdcAccountId = useOnboardingStore((s) => s.sfdcAccountId);
-  const storefrontName = useOnboardingStore((s) => s.storefrontName);
-  const onboardingId = useOnboardingStore((s) => s.onboardingId);
   const markStepCompleted = useOnboardingStore((s) => s.markStepCompleted);
   const setCurrentStep = useOnboardingStore((s) => s.setCurrentStep);
 
   const [submitting, setSubmitting] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
-  const [sampleState, setSampleState] = useState<
-    'idle' | 'sending' | 'sent' | 'bounced'
-  >('idle');
-  const [sentToEmail, setSentToEmail] = useState('');
-  const [bounceReason, setBounceReason] = useState('');
-  const [lastSent, setLastSent] = useState<{
-    when: string;
-    accepted: boolean;
-  } | null>(null);
 
   const methods = useForm<Step6Values>({
     resolver: zodResolver(step6Schema),
@@ -83,19 +58,12 @@ export default function Step6Invoicing() {
     (async () => {
       const draft = await loadDraft<Step6Values>(6);
       if (mounted && draft) reset(draft);
-      // Show "last sent" so the retailer doesn't spam the button.
-      if (sfdcAccountId) {
-        const last = await getLatestSampleInvoice(sfdcAccountId);
-        if (mounted && last) {
-          setLastSent({ when: last.sentAt, accepted: last.accepted });
-        }
-      }
       setDraftLoaded(true);
     })();
     return () => {
       mounted = false;
     };
-  }, [reset, sfdcAccountId]);
+  }, [reset]);
 
   useEffect(() => {
     if (!draftLoaded) return;
@@ -110,96 +78,18 @@ export default function Step6Invoicing() {
 
   const onSubmit = async (values: Step6Values) => {
     setSubmitting(true);
-    setBounceReason('');
     try {
       await submitStep(6, values);
-
-      if (values.sendSample) {
-        setSampleState('sending');
-        const result = await sendSampleInvoice({
-          sfdcAccountId: sfdcAccountId ?? 'UNKNOWN',
-          storefrontName: storefrontName ?? 'your store',
-          contactName: values.contactName,
-          contactEmail: values.contactEmail,
-          onboardingId,
-        });
-
-        if (!result.accepted) {
-          setSampleState('bounced');
-          setBounceReason(result.errorReason ?? 'unknown');
-          toast.error(t('step_6_invoicing.bounce_error'));
-          return; // keep form editable
-        }
-
-        setSentToEmail(values.contactEmail);
-        setSampleState('sent');
-      } else {
-        // No sample requested — complete and move on
-        markStepCompleted(6);
-        setCurrentStep(7);
-        navigate('/onboarding/launch');
-      }
+      markStepCompleted(6);
+      setCurrentStep(7);
+      navigate('/onboarding/launch');
     } catch (err) {
-      // If sendSampleInvoice threw, the sample send failed server-side.
-      // Reset sampleState so the submit button isn't stuck disabled by the
-      // `submitting || sampleState === 'sending'` guard. Surface a useful
-      // toast and let the user uncheck the sample box or retry.
-      const rawMsg = err instanceof Error ? err.message : '';
-      const isEmailFail = rawMsg.startsWith('email_failed');
-      if (isEmailFail) {
-        const reason = rawMsg.split(':')[1] || 'unknown';
-        setSampleState('bounced');
-        setBounceReason(reason);
-        toast.error(t('step_6_invoicing.bounce_error'));
-      } else {
-        setSampleState('idle');
-        toast.error(rawMsg || t('global.errors.generic'));
-      }
+      const msg = err instanceof Error ? err.message : '';
+      toast.error(msg || t('global.errors.generic'));
     } finally {
       setSubmitting(false);
     }
   };
-
-  const acknowledgeSample = () => {
-    markStepCompleted(6);
-    setCurrentStep(7);
-    navigate('/onboarding/launch');
-  };
-
-  // Sent confirmation state
-  if (sampleState === 'sent') {
-    return (
-      <section className="stack stack-lg">
-        <div className="step-header">
-          <div className="step-header__eyebrow">
-            {t('nav.step_of', 'Step {current} of {total}', { current: 6, total: 7 })}
-          </div>
-          <h1>{t('step_6_invoicing.title')}</h1>
-        </div>
-        <div className="callout callout--success">
-          <CheckCircle2 size={20} />
-          <div>
-            <strong>
-              {t('step_6_invoicing.sent_message', { email: sentToEmail })}
-            </strong>
-            <p className="callout__sub">{t('step_6_invoicing.sent_subcopy')}</p>
-          </div>
-        </div>
-        <div className="step-footer">
-          <div />
-          <div className="step-footer__actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={acknowledgeSample}
-            >
-              {t('step_6_invoicing.ack_button')}
-            </button>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <FormProvider {...methods}>
@@ -215,24 +105,9 @@ export default function Step6Invoicing() {
           stepId={6}
           titleKey="step_6_invoicing.title"
           subtitleKey="step_6_invoicing.subtitle"
-          submitting={submitting || sampleState === 'sending'}
+          submitting={submitting}
           submitLabelKey="step_6_invoicing.submit"
         >
-          {sampleState === 'bounced' && (
-            <div className="callout callout--error" role="alert">
-              <AlertCircle size={20} />
-              <div>
-                <strong>{t('step_6_invoicing.bounce_error')}</strong>
-                {bounceReason && (
-                  <p className="callout__sub">
-                    {t('step_6_invoicing.bounce_reason_prefix')}{' '}
-                    <code>{bounceReason}</code>
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="sample-callout">
             <p>
               <strong>{t('step_6_invoicing.cadence_heading')}</strong>
@@ -242,17 +117,27 @@ export default function Step6Invoicing() {
               <li>{t('step_6_invoicing.cadence_bullet_2')}</li>
               <li>{t('step_6_invoicing.cadence_bullet_3')}</li>
             </ul>
-            {lastSent && (
-              <p className="sample-callout__last">
-                {lastSent.accepted
-                  ? t('step_6_invoicing.last_sent', {
-                      when: formatRelative(lastSent.when),
-                    })
-                  : t('step_6_invoicing.last_sent_bounced', {
-                      when: formatRelative(lastSent.when),
-                    })}
-              </p>
-            )}
+          </div>
+
+          <div className="sample-preview-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f7f8fa', border: '1px solid #e3e6ec', borderRadius: 8, margin: '8px 0 16px' }}>
+            <FileText size={20} aria-hidden="true" />
+            <div style={{ flex: 1 }}>
+              <strong style={{ display: 'block' }}>
+                {t('step_6_invoicing.preview_heading', 'See a sample invoice')}
+              </strong>
+              <span style={{ fontSize: 13, color: '#5b6472' }}>
+                {t('step_6_invoicing.preview_subcopy', 'Opens the PDF in a new tab so you know what to expect each week.')}
+              </span>
+            </div>
+            <a
+              href="/sample-invoice.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              data-testid="preview-sample-invoice"
+            >
+              {t('step_6_invoicing.preview_button', 'Preview Sample Invoice')}
+            </a>
           </div>
 
           <div className="field-row">
@@ -292,14 +177,6 @@ export default function Step6Invoicing() {
               )}
             </div>
           </div>
-
-          <label className="checkbox-row">
-            <input type="checkbox" {...register('sendSample')} />
-            <span>
-              <Mail size={14} style={{ marginRight: 6 }} />
-              {t('step_6_invoicing.fields.send_sample_checkbox')}
-            </span>
-          </label>
         </StepShell>
       </form>
     </FormProvider>
