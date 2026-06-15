@@ -47,6 +47,7 @@ export default function Step6Invoicing() {
   const navigate = useNavigate();
   const sfdcAccountId = useOnboardingStore((s) => s.sfdcAccountId);
   const storefrontName = useOnboardingStore((s) => s.storefrontName);
+  const onboardingId = useOnboardingStore((s) => s.onboardingId);
   const markStepCompleted = useOnboardingStore((s) => s.markStepCompleted);
   const setCurrentStep = useOnboardingStore((s) => s.setCurrentStep);
 
@@ -120,6 +121,7 @@ export default function Step6Invoicing() {
           storefrontName: storefrontName ?? 'your store',
           contactName: values.contactName,
           contactEmail: values.contactEmail,
+          onboardingId,
         });
 
         if (!result.accepted) {
