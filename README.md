@@ -81,3 +81,5 @@ This repo is built incrementally across 14 PRs:
 ## License
 
 Proprietary — © National Secure Transport.
+
+<!-- redeploy trigger: HQ-owned sample invoice (PR #26) -->
