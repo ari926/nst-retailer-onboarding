@@ -16,6 +16,7 @@
 
 import { MOCK_AUTH_ENABLED } from '../hooks/useAuth';
 import { supabase } from './supabase';
+import { readTokenSession } from './tokenSession';
 
 export interface SampleInvoicePayload {
   sfdcAccountId: string;
@@ -88,12 +89,20 @@ export async function sendSampleInvoice(
     return result;
   }
 
-  // Real path — Supabase Edge Function. Uses functions.invoke so the
-  // user's JWT (which carries sfdc_account_id) is forwarded automatically.
+  // Real path — Supabase Edge Function. Portal users authenticate via the
+  // magic-link token (NOT Supabase Auth), so we forward the token from
+  // localStorage. The edge function looks up `onboarding_tokens` to resolve
+  // the SF account/opportunity/contact ids server-side.
+  const session = readTokenSession();
+  if (!session) {
+    throw new Error('email_failed:missing_portal_token');
+  }
+
   const { data, error } = await supabase.functions.invoke<SampleInvoiceResult>(
     'send-sample-invoice',
     {
       body: {
+        token: session.token,
         storefrontName: payload.storefrontName,
         contactName: payload.contactName,
         contactEmail: payload.contactEmail,
@@ -101,7 +110,7 @@ export async function sendSampleInvoice(
     },
   );
   if (error) {
-    // Edge Function returns 502 on Resend failure; functions.invoke
+    // Edge Function returns 502 on send failure; functions.invoke
     // surfaces that as an error but still includes the JSON body so we
     // can show the precise reason.
     const detail = (error as unknown as { context?: { errorReason?: string } })
@@ -109,6 +118,9 @@ export async function sendSampleInvoice(
     throw new Error(detail ? `email_failed:${detail}` : 'email_failed');
   }
   if (!data) throw new Error('email_failed:empty_response');
+  if (!data.accepted) {
+    throw new Error(`email_failed:${data.errorReason ?? 'unknown'}`);
+  }
   return data;
 }
 
