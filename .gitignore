@@ -48,3 +48,4 @@ supabase/.temp
 *.pem
 private.pem
 public.pem
+.env.production
