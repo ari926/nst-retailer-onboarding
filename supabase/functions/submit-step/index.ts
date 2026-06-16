@@ -655,5 +655,27 @@ Deno.serve(async (req) => {
   });
   if (auditErr) console.error('[submit-step] audit_log insert failed', auditErr);
 
+  // Fire-and-forget: kick notify-hq so the HQ portal-progress-widget updates
+  // within seconds instead of waiting for the next 30s pg_cron tick. The
+  // trigger on step_submissions has already enqueued the outbox row; this
+  // call just drains it now. We do NOT await the response — the HMAC POST
+  // can take 200-500ms and there's no value to the retailer in blocking.
+  try {
+    const projectUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (projectUrl && serviceKey) {
+      fetch(`${projectUrl}/functions/v1/notify-hq`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ source: 'submit-step', step_number: stepNumber }),
+      }).catch((e) => console.error('[submit-step] notify-hq kick failed', e));
+    }
+  } catch (e) {
+    console.error('[submit-step] notify-hq kick threw', e);
+  }
+
   return json(200, { ok: true, sf_writeback: sfWriteback });
 });

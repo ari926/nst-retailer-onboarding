@@ -6,15 +6,22 @@
 // HQ never blocks a retailer's step submission, and we get free retry +
 // dead-letter handling.
 //
-// Auth: deployed with verify_jwt=false. Cron jobs send `x-cron-secret`
-// against the existing SALESFORCE_CRON_SECRET (we reuse the same secret
-// since it's the same trust boundary — server-side cron driver).
+// Auth: verify_jwt=false. The trust boundary is the HMAC signature we
+// produce on every outbound POST, plus the fact that this only drains
+// outbox rows that the trigger already gated on a real submission.
+//
+// Wire schema (matches HQ's portal-progress-webhook expectations):
+//   - x-portal-signature: hex(HMAC-SHA256(PORTAL_WEBHOOK_SECRET, rawBody))
+//   - body: { event, salesforce_opportunity_id, salesforce_account_id,
+//            salesforce_contact_id, step_id, step_name, submitted_at,
+//            field_snapshot: {...per-step keys HQ knows...},
+//            completion: { current_step, completed_steps, status } }
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { hmacSign } from '../_shared/hmac.ts';
 
-const HQ_WEBHOOK_URL = Deno.env.get('HQ_PROGRESS_WEBHOOK_URL'); // set by Lovable
+const HQ_WEBHOOK_URL = Deno.env.get('HQ_PROGRESS_WEBHOOK_URL');
 const PORTAL_WEBHOOK_SECRET = Deno.env.get('PORTAL_WEBHOOK_SECRET');
 
 const BATCH_SIZE = 25;
@@ -27,56 +34,58 @@ const json = (status: number, body: unknown) =>
   });
 
 /**
- * Build the masked field snapshot for a given step submission. Banking step (3)
- * is the sensitive one — we explicitly never include full routing/account
- * numbers; only `*_last_4` derived columns.
+ * Build the per-step field snapshot HQ's portal-progress-webhook expects.
+ * Step keys mirror what HQ's SCALAR_FIELDS/JSONB_FIELDS map handles. Banking
+ * (step 3) is masked: last-4 only — never full numbers.
  */
-function buildFieldSnapshot(stepId: number, payload: any): Record<string, unknown> {
-  switch (stepId) {
-    case 1:
+function buildFieldSnapshot(stepNumber: number, p: any): Record<string, unknown> {
+  if (!p || typeof p !== 'object') return {};
+  switch (stepNumber) {
+    case 1: {
+      const primary = p.primaryContact ?? {};
+      const boh = p.bohManager ?? {};
       return {
-        legal_entity_name: payload.legalEntityName ?? payload.storefrontName ?? null,
-        dba: payload.dba ?? null,
-        storefront_name: payload.storefrontName ?? null,
-        address_line_1: payload.addressLine1 ?? null,
-        address_line_2: payload.addressLine2 ?? null,
-        city: payload.city ?? null,
-        state: payload.state ?? null,
-        zip: payload.zip ?? null,
-        phone: payload.phone ?? null,
-        website: payload.website ?? null,
-        hours: payload.hours ?? {},
-        owner_contact: payload.ownerContact ?? null,
-        manager_contact: payload.managerContact ?? null,
+        legal_entity_name: p.legalName ?? p.storefrontName ?? null,
+        storefront_name: p.storefrontName ?? null,
+        dba: p.dba ?? p.storefrontName ?? null,
+        address_line_1: p.street ?? null,
+        address_line_2: p.suite ?? null,
+        city: p.city ?? null,
+        state: p.state ?? null,
+        zip: p.zip ?? null,
+        phone: primary.phone ?? null,
+        website: p.website ?? null,
+        hours: p.hours ?? {},
+        owner_contact: primary && (primary.name || primary.email || primary.phone)
+          ? { name: primary.name ?? null, email: primary.email ?? null, phone: primary.phone ?? null }
+          : null,
+        manager_contact: boh && (boh.name || boh.email || boh.phone)
+          ? { name: boh.name ?? null, email: boh.email ?? null, phone: boh.phone ?? null }
+          : null,
       };
+    }
     case 2:
       return {
-        safe_type: payload.safeType ?? null,
-        safe_make: payload.safeMake ?? null,
-        safe_model: payload.safeModel ?? null,
-        safe_location: payload.safeLocation ?? null,
-        provisional_credit_eligible: !!payload.provisionalCredit,
-        key_holders: payload.keyHolders ?? [],
-        // Combo is never in the payload — confirmed on-site only.
+        safe_type: p.hasSmartSafe === 'yes' ? 'smart_safe' : (p.storageMethod ?? null),
+        safe_make: p.safeMake ?? null,
+        safe_model: p.safeModel ?? null,
+        safe_location: p.storageMethodOther || p.storageMethod || null,
+        provisional_credit_eligible:
+          p.provisionalCredit === true || p.provisionalCredit === 'yes',
+        key_holders: p.keyHolders ?? [],
       };
     case 3: {
-      // MASKED. Last-4 only. If the payload accidentally contains full
-      // numbers (it shouldn't — the submit-step function masks before
-      // persisting), derive last-4 here and drop the rest.
-      const fullAccount =
-        payload.accountNumber ?? payload.account_number ?? null;
-      const fullRouting =
-        payload.routingNumber ?? payload.routing_number ?? null;
+      // MASKED: never include full account/routing in the snapshot.
+      const fullAccount = p.accountNumber ?? p.account_number ?? null;
+      const fullRouting = p.routingNumber ?? p.routing_number ?? null;
       const accountLast4 =
-        payload.accountLast4 ??
-        (fullAccount ? String(fullAccount).slice(-4) : null);
+        p.accountLast4 ?? (fullAccount ? String(fullAccount).slice(-4) : null);
       const routingLast4 =
-        payload.routingLast4 ??
-        (fullRouting ? String(fullRouting).slice(-4) : null);
+        p.routingLast4 ?? (fullRouting ? String(fullRouting).slice(-4) : null);
       return {
-        bank_name: payload.bankName ?? null,
-        account_type: payload.accountType ?? null,
-        name_on_account: payload.nameOnAccount ?? null,
+        bank_name: p.bankName ?? null,
+        account_type: p.accountType ?? null,
+        name_on_account: p.signerName ?? p.nameOnAccount ?? null,
         routing_last_4: routingLast4,
         account_last_4: accountLast4,
       };
@@ -84,37 +93,37 @@ function buildFieldSnapshot(stepId: number, payload: any): Record<string, unknow
     case 4:
       return {
         sample_deposit: {
-          date: payload.date ?? null,
-          bag_number: payload.bagNumber ?? null,
-          total: payload.total ?? null,
-          denominations: payload.denominations ?? {},
+          date: p.date ?? null,
+          bag_number: p.bagNumber ?? null,
+          total: p.amount ?? p.total ?? null,
+          denominations: p.denominations ?? {},
         },
       };
     case 5:
       return {
         sample_change_order: {
-          delivery_date: payload.deliveryDate ?? null,
-          total: payload.total ?? null,
-          rolls: payload.rolls ?? {},
-          bills: payload.bills ?? {},
+          delivery_date: p.deliveryDate ?? null,
+          total: p.total ?? null,
+          rolls: p.rolls ?? {},
+          bills: p.bills ?? {},
         },
       };
     case 6:
       return {
         invoicing_contact: {
-          name: payload.contactName ?? null,
-          email: payload.contactEmail ?? null,
+          name: p.contactName ?? null,
+          email: p.contactEmail ?? null,
         },
       };
     case 7:
       return {
         first_pickup: {
-          deferred: !!payload.deferred,
-          preferred_date: payload.deferred ? null : (payload.preferredDate ?? null),
-          service_days: payload.serviceDays ?? [],
-          frequency: payload.frequency ?? null,
-          time_window: payload.timeWindow ?? null,
-          driver_notes: payload.driverNotes ?? null,
+          deferred: !!p.deferred,
+          preferred_date: p.deferred ? null : (p.preferredDate ?? null),
+          service_days: p.serviceDays ?? [],
+          frequency: p.frequency ?? null,
+          time_window: p.timeWindow ?? null,
+          driver_notes: p.driverNotes ?? null,
         },
       };
     default:
@@ -132,9 +141,13 @@ const STEP_NAMES: Record<number, string> = {
   7: 'first_pickup',
 };
 
-Deno.serve(async (req) => {
+Deno.serve(async (_req) => {
   if (!HQ_WEBHOOK_URL || !PORTAL_WEBHOOK_SECRET) {
-    return json(500, { error: 'env_not_configured' });
+    return json(500, {
+      error: 'env_not_configured',
+      hq_url_present: !!HQ_WEBHOOK_URL,
+      secret_present: !!PORTAL_WEBHOOK_SECRET,
+    });
   }
 
   const startedAt = Date.now();
@@ -143,8 +156,9 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
-  // Claim a batch of due, non-dead jobs.
-  const { data: jobs, error: claimErr } = await supabase
+  // Claim a batch of due, non-dead jobs by flipping status -> 'sending'.
+  // We claim, then re-select with the new status to dodge anyone else doing the same.
+  const { data: claimed, error: claimErr } = await supabase
     .from('hq_sync_outbox')
     .update({ status: 'sending' })
     .lte('next_run_at', new Date().toISOString())
@@ -155,45 +169,70 @@ Deno.serve(async (req) => {
   if (claimErr) {
     return json(500, { error: claimErr.message });
   }
-  if (!jobs || jobs.length === 0) {
+  const jobs = claimed ?? [];
+  if (jobs.length === 0) {
     return json(200, { processed: 0, duration_ms: Date.now() - startedAt });
   }
 
-  const results: Array<{ id: string; status: string }> = [];
+  const results: Array<{ id: string; status: string; error?: string }> = [];
 
   for (const job of jobs) {
     const attemptStartedAt = Date.now();
     let fieldSnapshot: Record<string, unknown> = {};
-    let completion = { current_step: 0, completed_steps: [] as number[], status: 'in_progress' };
+    let completion = {
+      current_step: 0,
+      completed_steps: [] as number[],
+      status: 'in_progress' as string,
+    };
 
-    // For step_submitted events, hydrate field_snapshot + completion from
-    // the submission + the latest state.
     if (job.event === 'step_submitted' && job.step_id) {
-      const { data: sub } = await supabase
-        .from('step_submissions')
-        .select('payload, submitted_at')
-        .eq('id', job.payload.submission_id)
-        .maybeSingle();
-
-      if (sub) {
-        fieldSnapshot = buildFieldSnapshot(job.step_id, sub.payload ?? {});
+      // Hydrate snapshot from the original step_submissions row.
+      const subId = (job.payload as any)?.submission_id as string | undefined;
+      if (subId) {
+        const { data: sub } = await supabase
+          .from('step_submissions')
+          .select('submitted_data, onboarding_id')
+          .eq('id', subId)
+          .maybeSingle();
+        if (sub) {
+          fieldSnapshot = buildFieldSnapshot(job.step_id, sub.submitted_data ?? {});
+        }
       }
 
-      // Compute completion summary from all step_submissions for this account
-      const { data: allSubs } = await supabase
-        .from('step_submissions')
-        .select('step_id')
-        .eq('sfdc_account_id', job.sfdc_account_id);
-
-      const completedSteps = Array.from(
-        new Set((allSubs ?? []).map((s) => s.step_id)),
-      ).sort((a, b) => a - b);
-      const maxStep = completedSteps.length ? Math.max(...completedSteps) : 0;
-      completion = {
-        current_step: Math.min(maxStep + 1, 7),
-        completed_steps: completedSteps,
-        status: completedSteps.length >= 7 ? 'completed' : 'in_progress',
-      };
+      // Completion summary: read all submissions for this onboarding.
+      const onboardingId = (job.payload as any)?.onboarding_id as string | undefined;
+      if (onboardingId) {
+        const { data: allSubs } = await supabase
+          .from('step_submissions')
+          .select('step_number')
+          .eq('onboarding_id', onboardingId);
+        const completedSteps = Array.from(
+          new Set((allSubs ?? []).map((s: any) => s.step_number as number)),
+        ).sort((a, b) => a - b);
+        const maxStep = completedSteps.length ? Math.max(...completedSteps) : 0;
+        completion = {
+          current_step: Math.min(maxStep + 1, 7),
+          completed_steps: completedSteps,
+          status: completedSteps.length >= 7 ? 'completed' : 'in_progress',
+        };
+      }
+    } else if (job.event === 'onboarding_completed') {
+      // Pull final completed_steps from step_submissions.
+      const onboardingId = (job.payload as any)?.onboarding_id as string | undefined;
+      if (onboardingId) {
+        const { data: allSubs } = await supabase
+          .from('step_submissions')
+          .select('step_number')
+          .eq('onboarding_id', onboardingId);
+        const completedSteps = Array.from(
+          new Set((allSubs ?? []).map((s: any) => s.step_number as number)),
+        ).sort((a, b) => a - b);
+        completion = {
+          current_step: 7,
+          completed_steps: completedSteps,
+          status: 'completed',
+        };
+      }
     }
 
     const body = JSON.stringify({
@@ -203,7 +242,8 @@ Deno.serve(async (req) => {
       salesforce_contact_id: job.sfdc_contact_id,
       step_id: job.step_id,
       step_name: job.step_id ? STEP_NAMES[job.step_id] : null,
-      submitted_at: job.payload?.submitted_at ?? new Date().toISOString(),
+      submitted_at:
+        (job.payload as any)?.submitted_at ?? new Date().toISOString(),
       field_snapshot: fieldSnapshot,
       completion,
     });
@@ -229,6 +269,7 @@ Deno.serve(async (req) => {
             status: 'succeeded',
             succeeded_at: new Date().toISOString(),
             last_error: null,
+            attempts: (job.attempts ?? 0) + 1,
           })
           .eq('id', job.id);
 
@@ -236,7 +277,7 @@ Deno.serve(async (req) => {
           outbox_id: job.id,
           event: job.event,
           sfdc_opportunity_id: job.sfdc_opportunity_id,
-          attempt: job.attempts + 1,
+          attempt: (job.attempts ?? 0) + 1,
           http_status: resp.status,
           ok: true,
           duration_ms: durationMs,
@@ -248,8 +289,8 @@ Deno.serve(async (req) => {
         throw new Error(`HQ ${resp.status}: ${text.slice(0, 300)}`);
       }
     } catch (err) {
-      const nextAttempt = job.attempts + 1;
-      const dead = nextAttempt >= job.max_attempts;
+      const nextAttempt = (job.attempts ?? 0) + 1;
+      const dead = nextAttempt >= (job.max_attempts ?? 5);
       const backoffSec =
         BACKOFF_SECONDS[Math.min(nextAttempt - 1, BACKOFF_SECONDS.length - 1)];
 
@@ -275,7 +316,11 @@ Deno.serve(async (req) => {
         duration_ms: Date.now() - attemptStartedAt,
       });
 
-      results.push({ id: job.id, status: dead ? 'dead' : 'failed' });
+      results.push({
+        id: job.id,
+        status: dead ? 'dead' : 'failed',
+        error: (err as Error).message.slice(0, 200),
+      });
     }
   }
 
