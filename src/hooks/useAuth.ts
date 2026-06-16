@@ -7,6 +7,7 @@ import {
   TOKEN_SESSION_KEY,
   type TokenSession,
 } from '../lib/tokenSession';
+import { isDemoMode } from '../lib/demoMode';
 
 /**
  * useAuth — unified session source.
@@ -90,6 +91,21 @@ export function useAuth(): AuthContextValue {
 
   useEffect(() => {
     let mounted = true;
+
+    // Demo mode — inject a synthetic mock user so ProtectedRoute lets the
+    // visitor in without needing a real kickoff token. No backend calls.
+    if (isDemoMode()) {
+      const demoUser: MockUser = {
+        id: 'demo-user',
+        email: 'demo@nationalsecuretransport.com',
+        _mock: true,
+        user_metadata: { first_name: 'Demo', is_demo: true },
+      };
+      setUser(demoUser);
+      setLoading(false);
+      setInitialized(true);
+      return () => { mounted = false; };
+    }
 
     // Hydrate token session first — it wins over Supabase auth and mock.
     const ts = readTokenSession();

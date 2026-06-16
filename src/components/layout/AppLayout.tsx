@@ -3,6 +3,7 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { LockedBanner } from './LockedBanner';
 import { AdminModeBanner } from './AdminModeBanner';
+import { DemoModeBanner } from './DemoModeBanner';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 
 /**
@@ -18,6 +19,7 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
+      <DemoModeBanner />
       <AdminModeBanner />
       <Header />
       <div className="app-body">

@@ -5,6 +5,7 @@ import { mockSignIn, MOCK_AUTH_ENABLED } from '../hooks/useAuth';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { resolveAndStoreToken } from '../lib/tokenSession';
 import { SUPABASE_PROJECT_URL } from '../lib/supabase';
+import { isDemoMode } from '../lib/demoMode';
 
 type TokenStatus = 'idle' | 'resolving' | 'invalid' | 'expired' | 'revoked' | 'error';
 
@@ -29,8 +30,19 @@ export default function Home() {
   const setOnboarding = useOnboardingStore((s) => s.setOnboarding);
 
   const token = params.get('t');
+  const demo = isDemoMode();
   const [status, setStatus] = useState<TokenStatus>(token ? 'resolving' : 'idle');
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+
+  // Demo mode — jump straight into the onboarding flow with the demo flag
+  // preserved in the URL so deep links and refreshes stay in demo mode.
+  useEffect(() => {
+    if (demo) {
+      setOnboarding({ currentStep: 1 });
+      navigate('/onboarding/profile?demo=1', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demo]);
 
   useEffect(() => {
     if (!token) return;

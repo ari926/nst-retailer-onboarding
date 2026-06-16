@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { recordMockSync } from './salesforceService';
+import { isDemoMode, getDemoPayload } from './demoMode';
 import type { StepId } from '../types/onboarding';
 
 /**
@@ -80,6 +81,12 @@ async function callSubmitStep(stepNumber: number, kind: 'draft' | 'submit', payl
 }
 
 export async function saveDraft<T>(stepId: StepId, payload: T): Promise<void> {
+  // Demo mode — no-op. Never touch Supabase or fire HQ webhooks.
+  if (isDemoMode()) {
+    void payload; void stepId;
+    return;
+  }
+
   // Always mirror to localStorage for instant restore on page reload.
   if (MOCK_AUTH_ENABLED) {
     try {
@@ -103,6 +110,12 @@ export async function saveDraft<T>(stepId: StepId, payload: T): Promise<void> {
 }
 
 export async function loadDraft<T>(stepId: StepId): Promise<T | null> {
+  // Demo mode — return a fully-valid pre-filled payload so the user can
+  // click through Next on every step without typing.
+  if (isDemoMode()) {
+    return getDemoPayload<T>(stepId);
+  }
+
   if (MOCK_AUTH_ENABLED) {
     const raw = localStorage.getItem(mockKey(stepId, 'draft'));
     if (raw) {
@@ -115,6 +128,14 @@ export async function loadDraft<T>(stepId: StepId): Promise<T | null> {
 }
 
 export async function submitStep<T>(stepId: StepId, payload: T): Promise<void> {
+  // Demo mode — no-op. We still record the mock sync so the local stepper
+  // UI shows the step as completed and routes to the next page.
+  if (isDemoMode()) {
+    void payload;
+    recordMockSync(stepId);
+    return;
+  }
+
   // Token-driven submit (current testing mode). This writes to step_submissions
   // server-side via the edge function and, for step 1, pushes corrections back
   // to Salesforce.
