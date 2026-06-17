@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "NST Retailer self-serve onboarding — post-contract flow at onboard.nationalsecuretransport.com",
+  "description": "NST Retailer self-serve onboarding \u2014 post-contract flow at onboard.nationalsecuretransport.com",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "playwright test",
