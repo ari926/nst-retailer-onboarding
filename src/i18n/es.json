@@ -232,6 +232,10 @@
   "step_6_invoicing": {
     "title": "¿A dónde te enviamos las facturas?",
     "subtitle": "NST factura semanalmente. Confirma el contacto de facturación y te enviaremos una muestra ahora para que sepas qué esperar.",
+    "cadence_heading": "Así funciona la facturación de NST",
+    "cadence_bullet_1": "Las facturas salen cada lunes por la mañana cubriendo la semana anterior.",
+    "cadence_bullet_2": "El pago vence 15 días después de la fecha de facturación (Neto 15).",
+    "cadence_bullet_3": "Siempre enviamos un PDF junto con un CSV de partidas.",
     "fields": {
       "contact_name": "Nombre del contacto de facturación",
       "contact_email": "Correo electrónico de facturación",
@@ -240,14 +244,34 @@
     },
     "submit": "Confirmar y enviar muestra",
     "sent_message": "Factura de muestra en camino a {email}.",
+    "sent_subcopy": "Revisa tu bandeja en uno o dos minutos. Dale continuar cuando llegue para confirmar tu fecha de lanzamiento.",
     "ack_button": "Ya recibí la muestra",
-    "bounce_error": "Tu correo rebotó. Por favor actualiza la dirección e intenta de nuevo."
+    "bounce_error": "Tu correo rebotó. Por favor actualiza la dirección e intenta de nuevo.",
+    "bounce_reason_prefix": "Razón del proveedor de correo:"
   },
 
   "step_7_launch": {
     "title": "¿Cuándo quieres tu primera recolección?",
-    "subtitle": "Necesitamos una ventana mínima de 10 días calendario para programar tu primera recolección. La fecha más próxima abajo es {earliestDate}.",
+    "subtitle": "Necesitamos una ventana mínima de 10 días calendario para programar tu primera recolección.",
+    "earliest_callout": "Primera recolección más próxima: {earliestDate}. Necesitamos 10 días calendario para coordinar la ruta.",
+    "mode_commit": "Ya sé la fecha que quiero",
+    "day_short": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mié",
+      "thu": "Jue",
+      "fri": "Vie",
+      "sat": "Sáb"
+    },
+    "frequencies": {
+      "weekly": "Semanal",
+      "twice_weekly": "Dos veces por semana",
+      "thrice_weekly": "Tres veces por semana",
+      "daily": "Diario (Lun–Vie)",
+      "biweekly": "Cada dos semanas"
+    },
     "fields": {
+      "select_placeholder": "— Selecciona —",
       "preferred_date": "Fecha preferida para la primera recolección",
       "not_sure_yet": "No estoy seguro todavía — lo confirmo después",
       "not_sure_subcopy": "No hay problema. Te escribiremos cada 2 semanas para saber cómo vas. Puedes volver aquí en cualquier momento para fijarla.",

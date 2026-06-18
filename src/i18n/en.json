@@ -232,6 +232,10 @@
   "step_6_invoicing": {
     "title": "Where should we send your invoices?",
     "subtitle": "NST invoices weekly. Confirm the billing contact and we'll send a sample right now so you know what to expect.",
+    "cadence_heading": "How NST invoicing works",
+    "cadence_bullet_1": "Invoices go out every Monday morning covering the prior week.",
+    "cadence_bullet_2": "Payment is due 15 days after invoice date (Net 15).",
+    "cadence_bullet_3": "We'll always send a PDF plus a line-item CSV.",
     "fields": {
       "contact_name": "Billing contact name",
       "contact_email": "Billing email",
@@ -240,14 +244,34 @@
     },
     "submit": "Confirm and send sample",
     "sent_message": "Sample invoice on the way to {email}.",
+    "sent_subcopy": "Check your inbox in a minute or two. Hit continue when it arrives so we can lock in your launch date.",
     "ack_button": "I got the sample",
-    "bounce_error": "Your email bounced. Please update the address and try again."
+    "bounce_error": "Your email bounced. Please update the address and try again.",
+    "bounce_reason_prefix": "Reason from our email provider:"
   },
 
   "step_7_launch": {
     "title": "When do you want your first pickup?",
-    "subtitle": "We need a minimum 10 calendar-day window to schedule your first pickup. The earliest date below is {earliestDate}.",
+    "subtitle": "We need a minimum 10 calendar-day window to schedule your first pickup.",
+    "earliest_callout": "Earliest first pickup: {earliestDate}. We need 10 calendar days to line up the route.",
+    "mode_commit": "I know the date I want",
+    "day_short": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "frequencies": {
+      "weekly": "Weekly",
+      "twice_weekly": "Twice a week",
+      "thrice_weekly": "Three times a week",
+      "daily": "Daily (Mon–Fri)",
+      "biweekly": "Every two weeks"
+    },
     "fields": {
+      "select_placeholder": "— Select —",
       "preferred_date": "Preferred first pickup date",
       "not_sure_yet": "I'm not sure yet — I'll confirm later",
       "not_sure_subcopy": "No problem. We'll check in every 2 weeks. You can come back here anytime to lock it in.",
