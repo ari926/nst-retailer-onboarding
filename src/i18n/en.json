@@ -40,7 +40,9 @@
     "errors": {
       "generic": "Something went wrong. Please try again.",
       "network": "We couldn't connect. Check your internet connection.",
-      "session_expired": "Your session expired. Please sign in again."
+      "session_expired": "Your session expired. Please sign in again.",
+      "fix_one_field": "Please fix the highlighted field below before continuing.",
+      "fix_n_fields": "Please fix the {count} highlighted fields below before continuing."
     }
   },
 
@@ -48,22 +50,21 @@
     "step_of": "Step {current} of {total}",
     "step_1_short": "Store profile",
     "step_2_short": "Safe & keys",
-    "step_3_short": "Banking",
-    "step_4_short": "Sample deposit",
-    "step_5_short": "Sample change order",
-    "step_6_short": "Invoicing",
-    "step_7_short": "First pickup"
+    "step_3_short": "Sample deposit",
+    "step_4_short": "Sample change order",
+    "step_5_short": "Invoicing",
+    "step_6_short": "First pickup"
   },
 
   "onboarding": {
     "overview_eyebrow": "Setup overview",
     "welcome_title": "Let's get your store set up.",
-    "welcome_subtitle": "Seven quick steps. You can save and come back anytime.",
+    "welcome_subtitle": "Six quick steps. You can save and come back anytime.",
     "all_done_title": "Nice — you're ready to launch.",
     "all_done_subtitle": "Your operations team will confirm your launch date shortly.",
     "next_up": "Next up",
     "handoff": {
-      "ready_title": "All 7 steps submitted",
+      "ready_title": "All 6 steps submitted",
       "ready_sub": "Your NST rep is lining up your launch date. Download a summary to keep for your records — it's the same doc ops uses to set up your store.",
       "download_cta": "Download ops summary",
       "downloading": "Preparing PDF…",
@@ -173,21 +174,6 @@
     }
   },
 
-  "step_3_banking": {
-    "title": "Confirm your banking details.",
-    "subtitle": "We pulled these from the cash info form you signed. Review them before we connect everything.",
-    "fields": {
-      "bank_name": "Bank name",
-      "account_last4": "Last 4 of account number",
-      "routing_number": "Routing number",
-      "signer_name": "Signer name",
-      "match_checkbox": "These match my records",
-      "flag_button": "Flag for NST to update",
-      "mismatch_notes": "Tell us what's wrong"
-    },
-    "ocr_fail_banner": "We couldn't read your form automatically. Please type the details from your signed cash info form."
-  },
-
   "step_4_deposit": {
     "title": "Let's walk through a deposit.",
     "subtitle": "Before your first real pickup, our driver needs you to enter a deposit in the Cash Services Portal. Let's walk through the same form here so you know exactly what to do on day one. This is a sample — nothing is submitted live.",
@@ -198,6 +184,8 @@
       "date": "Deposit date",
       "bag_number": "Sealed bag number",
       "bag_number_hint": "Use TEST-{retailerId}",
+      "bag_tooltip": "The number listed on your clear, sealed, tamper-evident bag.",
+      "bag_tooltip_aria": "What is the sealed bag number?",
       "copy_button": "Copy",
       "denominations_title": "Denomination breakdown",
       "denominations_hint": "Use 5 × $20 bills = $100",
@@ -220,19 +208,20 @@
     "fields": {
       "delivery_date": "Delivery date",
       "delivery_date_hint": "Pick any date at least 2 business days from today",
-      "denominations_title": "Denominations requested",
-      "denominations_hint": "Use $50 in quarters ($50.00 total)",
-      "coin_rolls_heading": "Coin rolls",
-      "loose_bills_heading": "Loose bills",
-      "rolls_column": "Rolls",
-      "count_column": "Count",
+      "bundles_hint": "Order is in currency bundles and coin boxes only.",
+      "bundles_heading": "Currency bundles",
+      "bundles_subhead": "Each bundle is a fixed amount. Enter the number of bundles you need.",
+      "bundles_column": "Bundles",
+      "coin_boxes_heading": "Coin boxes",
+      "coin_boxes_subhead": "Each box is a fixed amount of rolled coin. Enter the number of boxes you need.",
+      "boxes_column": "Boxes",
+      "denomination_column": "Denomination",
       "subtotal_column": "Subtotal",
-      "roll_label": "{name} (${amount}/roll)",
-      "bills_label": "${value} bills",
+      "bundle_label": "${value} bills · ${mult} per bundle",
+      "box_label": "{name} · ${mult} per box",
       "coin_quarters": "Quarters",
       "coin_dimes": "Dimes",
       "coin_nickels": "Nickels",
-      "coin_pennies": "Pennies",
       "delivery_notes": "Delivery notes (optional)",
       "total_label": "Calculated total"
     },
@@ -297,7 +286,12 @@
         "flexible": "Flexible"
       },
       "frequency": "Frequency",
-      "access_notes": "Notes for the driver"
+      "access_notes": "Notes for the driver",
+      "pickup_contact_heading": "Who do we contact on day of pickup?",
+      "pickup_contact_subhead": "Driver will call this person if anything is unclear or running late.",
+      "pickup_full_name": "Full name",
+      "pickup_mobile_phone": "Mobile phone",
+      "pickup_store_phone": "Store phone (optional)"
     },
     "date_too_soon_error": "Your first pickup must be at least 10 calendar days from today ({earliestDate} or later).",
     "tooltip_disabled_date": "We need at least 10 calendar days to schedule your first pickup.",

@@ -3,13 +3,12 @@ import { z } from 'zod';
 /**
  * Step 2 — Safe & keys
  *
- * Branching logic:
- *   - hasSmartSafe === 'yes'  -> safe make/model/serial + dashboard connection required
- *   - hasSmartSafe === 'no'   -> storageMethod required instead
- *
- * Always required:
- *   - at least one key holder (name + location)
- *   - provisional credit choice
+ * Branching logic (V2):
+ *   - hasSmartSafe === 'yes'  -> safe make/model/serial + dashboard connection
+ *                                + key holders (≥1) + provisional credit choice
+ *   - hasSmartSafe === 'no'   -> storageMethod ONLY
+ *                                (key holders + provisional credit are hidden
+ *                                 and not required)
  */
 
 export const STORAGE_METHODS = ['under_counter', 'drop_safe', 'vault', 'other'] as const;
@@ -17,30 +16,40 @@ export const DASHBOARD_OPTIONS = ['direct', 'carrier', 'unsure'] as const;
 export const PROVISIONAL_OPTIONS = ['already_set', 'want_to_set', 'no'] as const;
 
 const keyHolderSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string(),
   role: z.string().optional(),
-  location: z.string().min(1, 'Tell us where the key is kept'),
+  location: z.string(),
 });
 
 export const step2Schema = z
   .object({
     hasSmartSafe: z.enum(['yes', 'no'], { message: 'Pick one' }),
 
-    // Smart safe branch
+    // Smart-safe branch
     safeMake: z.string().optional(),
     safeModel: z.string().optional(),
     safeSerial: z.string().optional(),
-    dashboardConnection: z.enum(DASHBOARD_OPTIONS).optional(),
+    // Allow null because the radio group renders unselected as null;
+    // .optional() alone would emit a raw "Expected 'direct' | 'carrier'…"
+    // Zod message to the user when the field is null.
+    dashboardConnection: z
+      .enum(DASHBOARD_OPTIONS, { message: 'Required' })
+      .nullable()
+      .optional(),
 
     // No-smart-safe branch
-    storageMethod: z.enum(STORAGE_METHODS).optional(),
+    storageMethod: z
+      .enum(STORAGE_METHODS, { message: 'Required' })
+      .nullable()
+      .optional(),
     storageMethodOther: z.string().optional(),
 
-    // Always
-    keyHolders: z
-      .array(keyHolderSchema)
-      .min(1, 'Add at least one key holder'),
-    provisionalCredit: z.enum(PROVISIONAL_OPTIONS, { message: 'Pick one' }),
+    // Conditional (only when hasSmartSafe === 'yes')
+    keyHolders: z.array(keyHolderSchema).optional(),
+    provisionalCredit: z
+      .enum(PROVISIONAL_OPTIONS, { message: 'Pick one' })
+      .nullable()
+      .optional(),
   })
   .superRefine((v, ctx) => {
     if (v.hasSmartSafe === 'yes') {
@@ -55,6 +64,40 @@ export const step2Schema = z
       }
       if (!v.dashboardConnection) {
         ctx.addIssue({ code: 'custom', path: ['dashboardConnection'], message: 'Required' });
+      }
+
+      // Key holders required only when Smart Safe is in play.
+      if (!v.keyHolders || v.keyHolders.length === 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['keyHolders'],
+          message: 'Add at least one key holder',
+        });
+      } else {
+        v.keyHolders.forEach((kh, idx) => {
+          if (!kh.name?.trim()) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['keyHolders', idx, 'name'],
+              message: 'Name is required',
+            });
+          }
+          if (!kh.location?.trim()) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['keyHolders', idx, 'location'],
+              message: 'Tell us where the key is kept',
+            });
+          }
+        });
+      }
+
+      if (!v.provisionalCredit) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['provisionalCredit'],
+          message: 'Pick one',
+        });
       }
     } else if (v.hasSmartSafe === 'no') {
       if (!v.storageMethod) {
@@ -81,5 +124,5 @@ export const step2Defaults: Step2Values = {
   storageMethod: undefined,
   storageMethodOther: '',
   keyHolders: [{ name: '', role: '', location: '' }],
-  provisionalCredit: 'no',
+  provisionalCredit: undefined,
 };

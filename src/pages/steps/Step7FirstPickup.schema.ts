@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Step 7 — First pickup + ongoing service request.
+ * Step 6 (formerly Step 7) — First pickup + ongoing service request.
  *
  * Two modes:
  *   1. Retailer picks a preferred first pickup date (≥ 10 calendar days out)
@@ -9,8 +9,12 @@ import { z } from 'zod';
  *   2. Retailer is "not sure yet" — defer the date. NST will email every
  *      2 weeks (capped at 6 nudges = 12 weeks) asking them to confirm.
  *
- * In deferred mode the service-spec fields are optional — we still want to
- * capture whatever they know so ops can pre-plan.
+ * V2 addition: a **pickup contact** section ("Who do we contact on day of
+ * pickup?") is required in BOTH modes — full name + mobile phone are
+ * required, store phone is optional.
+ *
+ * In deferred mode the service-spec fields (days, frequency, window) are
+ * optional — we still want to capture whatever they know so ops can pre-plan.
  */
 
 export const SERVICE_DAYS = [
@@ -58,9 +62,21 @@ export const step7Schema = z
     timeWindow: z.union([z.enum(TIME_WINDOWS), z.literal('')]).optional(),
     frequency: z.union([z.enum(FREQUENCIES), z.literal('')]).optional(),
     driverNotes: z.string().max(500).optional(),
+    // Pickup contact — required in both modes (V2)
+    pickupContact: z.object({
+      fullName: z.string().min(1, 'Enter the contact name'),
+      mobilePhone: z.string().min(10, 'Enter a valid phone number'),
+      storePhone: z
+        .string()
+        .optional()
+        .refine(
+          (v) => !v || v.length === 0 || v.length >= 10,
+          'Enter a valid phone number',
+        ),
+    }),
   })
   .superRefine((v, ctx) => {
-    if (v.deferred) return; // no further checks when deferring
+    if (v.deferred) return; // no further checks when deferring (pickupContact already validated above)
 
     if (!v.preferredDate) {
       ctx.addIssue({
@@ -116,6 +132,11 @@ export const step7Defaults: Step7Values = {
   timeWindow: '',
   frequency: '',
   driverNotes: '',
+  pickupContact: {
+    fullName: '',
+    mobilePhone: '',
+    storePhone: '',
+  },
 };
 
 /** Max number of every-two-weeks nudges we'll send before auto-closing the loop. */

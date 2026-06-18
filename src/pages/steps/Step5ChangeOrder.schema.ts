@@ -1,30 +1,48 @@
 import { z } from 'zod';
 
 /**
- * Step 5 — Sample change order dry-run.
+ * Step 4 (formerly Step 5) — Sample change order dry-run.
  *
- * Retailer requests $50 in quarters so they know how to submit change
- * orders once live. Validation:
+ * V2 overhaul: change orders are now denominated as **currency bundles**
+ * (e.g. one bundle of $20s = $2,000) and **coin boxes** (e.g. one box of
+ * quarters = $500). Pennies, individual loose bills, and custom roll counts
+ * have all been removed.
+ *
+ * Bundle math (per the user spec):
+ *   $1   →  $100   per bundle
+ *   $5   →  $500   per bundle
+ *   $10  →  $1,000 per bundle
+ *   $20  →  $2,000 per bundle
+ *   $50  →  $5,000 per bundle
+ *   $100 → $10,000 per bundle
+ *
+ * Coin box math:
+ *   Nickels  → $100  per box
+ *   Dimes    → $250  per box
+ *   Quarters → $500  per box
+ *
+ * Validation:
  *   - delivery date must be at least 2 business days from today
- *   - at least one denomination requested with count > 0
+ *   - at least one bundle or coin box requested with quantity > 0
  */
 
-export const COIN_DENOMINATIONS = [
-  { key: 'quarters', value: 0.25 },
-  { key: 'dimes', value: 0.1 },
-  { key: 'nickels', value: 0.05 },
-  { key: 'pennies', value: 0.01 },
+export const BUNDLE_DENOMINATIONS = [
+  { key: 'ones', value: 1, mult: 100 },
+  { key: 'fives', value: 5, mult: 500 },
+  { key: 'tens', value: 10, mult: 1000 },
+  { key: 'twenties', value: 20, mult: 2000 },
+  { key: 'fifties', value: 50, mult: 5000 },
+  { key: 'hundreds', value: 100, mult: 10000 },
 ] as const;
 
-export const BILL_DENOMINATIONS = [
-  { key: 'singles', value: 1 },
-  { key: 'fives', value: 5 },
-  { key: 'tens', value: 10 },
-  { key: 'twenties', value: 20 },
+export const COIN_BOX_DENOMINATIONS = [
+  { key: 'nickels', mult: 100 },
+  { key: 'dimes', mult: 250 },
+  { key: 'quarters', mult: 500 },
 ] as const;
 
-export type CoinKey = (typeof COIN_DENOMINATIONS)[number]['key'];
-export type BillKey = (typeof BILL_DENOMINATIONS)[number]['key'];
+export type BundleKey = (typeof BUNDLE_DENOMINATIONS)[number]['key'];
+export type CoinBoxKey = (typeof COIN_BOX_DENOMINATIONS)[number]['key'];
 
 /** Count business days (Mon-Fri), no federal holiday calendar in V1. */
 export function addBusinessDays(from: Date, days: number): Date {
@@ -41,19 +59,20 @@ export function addBusinessDays(from: Date, days: number): Date {
 export const step5Schema = z
   .object({
     deliveryDate: z.string().min(1, 'Pick a delivery date'),
-    // coin rolls (count = rolls; quarters roll = $10 = 40 coins)
-    rolls: z.object({
-      quarters: z.coerce.number().int().min(0),
-      dimes: z.coerce.number().int().min(0),
-      nickels: z.coerce.number().int().min(0),
-      pennies: z.coerce.number().int().min(0),
-    }),
-    // loose bills (count = bills)
-    bills: z.object({
-      singles: z.coerce.number().int().min(0),
+    // Currency bundles — number of bundles requested per denomination
+    bundles: z.object({
+      ones: z.coerce.number().int().min(0),
       fives: z.coerce.number().int().min(0),
       tens: z.coerce.number().int().min(0),
       twenties: z.coerce.number().int().min(0),
+      fifties: z.coerce.number().int().min(0),
+      hundreds: z.coerce.number().int().min(0),
+    }),
+    // Coin boxes — number of boxes requested per denomination
+    coinBoxes: z.object({
+      nickels: z.coerce.number().int().min(0),
+      dimes: z.coerce.number().int().min(0),
+      quarters: z.coerce.number().int().min(0),
     }),
     notes: z.string().optional(),
   })
@@ -70,32 +89,31 @@ export const step5Schema = z
       });
     }
 
-    // At least one denomination > 0
+    // At least one bundle or coin box quantity > 0
     const any =
-      Object.values(v.rolls).some((n) => n > 0) ||
-      Object.values(v.bills).some((n) => n > 0);
+      Object.values(v.bundles).some((n) => n > 0) ||
+      Object.values(v.coinBoxes).some((n) => n > 0);
     if (!any) {
       ctx.addIssue({
         code: 'custom',
-        path: ['rolls'],
-        message: 'Request at least one denomination',
+        path: ['bundles'],
+        message: 'Request at least one bundle or coin box',
       });
     }
   });
 
 export type Step5Values = z.infer<typeof step5Schema>;
 
-// Values in a quarter roll, dime roll, etc. (standard bank roll counts)
-export const ROLL_COUNTS: Record<CoinKey, number> = {
-  quarters: 40, // $10 roll
-  dimes: 50, // $5 roll
-  nickels: 40, // $2 roll
-  pennies: 50, // $0.50 roll
-};
-
 export const step5Defaults: Step5Values = {
   deliveryDate: '',
-  rolls: { quarters: 0, dimes: 0, nickels: 0, pennies: 0 },
-  bills: { singles: 0, fives: 0, tens: 0, twenties: 0 },
+  bundles: {
+    ones: 0,
+    fives: 0,
+    tens: 0,
+    twenties: 0,
+    fifties: 0,
+    hundreds: 0,
+  },
+  coinBoxes: { nickels: 0, dimes: 0, quarters: 0 },
   notes: '',
 };

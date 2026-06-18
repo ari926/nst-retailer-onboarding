@@ -8,21 +8,25 @@ import toast from 'react-hot-toast';
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import {
   step5Schema,
   step5Defaults,
-  COIN_DENOMINATIONS,
-  BILL_DENOMINATIONS,
-  ROLL_COUNTS,
+  BUNDLE_DENOMINATIONS,
+  COIN_BOX_DENOMINATIONS,
   addBusinessDays,
   type Step5Values,
 } from './Step5ChangeOrder.schema';
 
 /**
- * Step 5 — Sample change order dry-run.
+ * Step 4 (formerly Step 5) — Sample change order dry-run.
  *
- * Retailer submits a sample request for $50 in quarters ($10 × 5 rolls)
- * so they know how to do this when they need change post-launch.
+ * V2: change orders are denominated as currency bundles + coin boxes only.
+ * Users enter the *number of bundles/boxes*; the form multiplies each entry
+ * by the per-bundle / per-box value to compute live subtotals and grand total.
+ *
+ * File name kept Step5ChangeOrder for stability — stepId is now 4 across the
+ * store / nav / draft persistence.
  */
 export default function Step5ChangeOrder() {
   const { t } = useTranslation();
@@ -50,7 +54,7 @@ export default function Step5ChangeOrder() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const draft = await loadDraft<Step5Values>(5);
+      const draft = await loadDraft<Step5Values>(4);
       if (mounted && draft) reset(draft);
       setDraftLoaded(true);
     })();
@@ -61,27 +65,27 @@ export default function Step5ChangeOrder() {
     if (!draftLoaded) return;
     const subscription = watch((values) => {
       const handle = setTimeout(() => {
-        void saveDraft(5, values);
+        void saveDraft(4, values);
       }, 1500);
       return () => clearTimeout(handle);
     });
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
 
-  const rolls = watch('rolls');
-  const bills = watch('bills');
+  const bundles = watch('bundles');
+  const coinBoxes = watch('coinBoxes');
 
   const calculatedTotal = useMemo(() => {
-    const coinTotal = COIN_DENOMINATIONS.reduce((sum, d) => {
-      const count = Number(rolls?.[d.key]) || 0;
-      return sum + count * ROLL_COUNTS[d.key] * d.value;
+    const bundleTotal = BUNDLE_DENOMINATIONS.reduce((sum, d) => {
+      const count = Number(bundles?.[d.key]) || 0;
+      return sum + count * d.mult;
     }, 0);
-    const billTotal = BILL_DENOMINATIONS.reduce((sum, d) => {
-      const count = Number(bills?.[d.key]) || 0;
-      return sum + count * d.value;
+    const boxTotal = COIN_BOX_DENOMINATIONS.reduce((sum, d) => {
+      const count = Number(coinBoxes?.[d.key]) || 0;
+      return sum + count * d.mult;
     }, 0);
-    return coinTotal + billTotal;
-  }, [rolls, bills]);
+    return bundleTotal + boxTotal;
+  }, [bundles, coinBoxes]);
 
   const minDateStr = useMemo(() => {
     const d = addBusinessDays(new Date(), 2);
@@ -91,9 +95,9 @@ export default function Step5ChangeOrder() {
   const onSubmit = async (values: Step5Values) => {
     setSubmitting(true);
     try {
-      await submitStep(5, values);
-      markStepCompleted(5);
-      setCurrentStep(6);
+      await submitStep(4, values);
+      markStepCompleted(4);
+      setCurrentStep(5);
       toast.success(t('step_5_change_order.success'));
       navigate('/onboarding/invoicing');
     } catch (err) {
@@ -106,9 +110,9 @@ export default function Step5ChangeOrder() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
-          stepId={5}
+          stepId={4}
           titleKey="step_5_change_order.title"
           subtitleKey="step_5_change_order.subtitle"
           submitting={submitting}
@@ -119,7 +123,7 @@ export default function Step5ChangeOrder() {
               <strong>{t('step_5_change_order.instructions_lead')}</strong>
               <ul>
                 <li>{t('step_5_change_order.fields.delivery_date_hint')}</li>
-                <li>{t('step_5_change_order.fields.denominations_hint')}</li>
+                <li>{t('step_5_change_order.fields.bundles_hint')}</li>
               </ul>
             </div>
 
@@ -141,78 +145,110 @@ export default function Step5ChangeOrder() {
 
             <hr className="divider" />
 
+            {/* Currency bundles */}
             <div className="field">
-              <h3 className="section-heading">{t('step_5_change_order.fields.coin_rolls_heading')}</h3>
+              <h3 className="section-heading">
+                {t('step_5_change_order.fields.bundles_heading')}
+              </h3>
+              <p className="text-muted text-sm" style={{ marginBottom: 8 }}>
+                {t('step_5_change_order.fields.bundles_subhead')}
+              </p>
               <div className="denom-grid">
                 <div className="denom-grid__head">
-                  <span />
-                  <span>{t('step_5_change_order.fields.rolls_column')}</span>
+                  <span>{t('step_5_change_order.fields.denomination_column')}</span>
+                  <span>{t('step_5_change_order.fields.bundles_column')}</span>
                   <span>{t('step_5_change_order.fields.subtotal_column')}</span>
                 </div>
-                {COIN_DENOMINATIONS.map((d) => {
-                  const count = Number(rolls?.[d.key]) || 0;
-                  const subtotal = count * ROLL_COUNTS[d.key] * d.value;
+                {BUNDLE_DENOMINATIONS.map((d) => {
+                  const count = Number(bundles?.[d.key]) || 0;
+                  const subtotal = count * d.mult;
                   return (
                     <div key={d.key} className="denom-grid__row">
                       <label
-                        htmlFor={`roll-${d.key}`}
+                        htmlFor={`bundle-${d.key}`}
                         className="denom-grid__label"
                       >
-                        {t('step_5_change_order.fields.roll_label', {
-                          name: t(`step_5_change_order.fields.coin_${d.key}`),
-                          amount: (ROLL_COUNTS[d.key] * d.value).toFixed(2),
+                        {t('step_5_change_order.fields.bundle_label', {
+                          value: d.value,
+                          mult: d.mult.toLocaleString('en-US'),
                         })}
                       </label>
                       <input
-                        id={`roll-${d.key}`}
+                        id={`bundle-${d.key}`}
                         className="input"
                         type="number"
                         min="0"
-                        {...register(`rolls.${d.key}` as const)}
+                        {...register(`bundles.${d.key}` as const)}
                       />
                       <span className="denom-grid__subtotal">
-                        ${subtotal.toFixed(2)}
+                        ${subtotal.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </span>
                     </div>
                   );
                 })}
               </div>
-              {errors.rolls && (
-                <span className="field-error">{errors.rolls.message as string}</span>
+              {errors.bundles && (
+                <span className="field-error">
+                  {errors.bundles.message as string}
+                </span>
               )}
             </div>
 
+            {/* Coin boxes */}
             <div className="field">
-              <h3 className="section-heading">{t('step_5_change_order.fields.loose_bills_heading')}</h3>
+              <h3 className="section-heading">
+                {t('step_5_change_order.fields.coin_boxes_heading')}
+              </h3>
+              <p className="text-muted text-sm" style={{ marginBottom: 8 }}>
+                {t('step_5_change_order.fields.coin_boxes_subhead')}
+              </p>
               <div className="denom-grid">
                 <div className="denom-grid__head">
-                  <span />
-                  <span>{t('step_5_change_order.fields.count_column')}</span>
+                  <span>{t('step_5_change_order.fields.denomination_column')}</span>
+                  <span>{t('step_5_change_order.fields.boxes_column')}</span>
                   <span>{t('step_5_change_order.fields.subtotal_column')}</span>
                 </div>
-                {BILL_DENOMINATIONS.map((d) => {
-                  const count = Number(bills?.[d.key]) || 0;
+                {COIN_BOX_DENOMINATIONS.map((d) => {
+                  const count = Number(coinBoxes?.[d.key]) || 0;
+                  const subtotal = count * d.mult;
                   return (
                     <div key={d.key} className="denom-grid__row">
-                      <label htmlFor={`bill-${d.key}`} className="denom-grid__label">
-                        {t('step_5_change_order.fields.bills_label', { value: d.value })}
+                      <label
+                        htmlFor={`box-${d.key}`}
+                        className="denom-grid__label"
+                      >
+                        {t('step_5_change_order.fields.box_label', {
+                          name: t(`step_5_change_order.fields.coin_${d.key}`),
+                          mult: d.mult.toLocaleString('en-US'),
+                        })}
                       </label>
                       <input
-                        id={`bill-${d.key}`}
+                        id={`box-${d.key}`}
                         className="input"
                         type="number"
                         min="0"
-                        {...register(`bills.${d.key}` as const)}
+                        {...register(`coinBoxes.${d.key}` as const)}
                       />
                       <span className="denom-grid__subtotal">
-                        ${(count * d.value).toFixed(2)}
+                        ${subtotal.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </span>
                     </div>
                   );
                 })}
                 <div className="denom-grid__total">
                   <span>{t('step_5_change_order.fields.total_label')}</span>
-                  <strong>${calculatedTotal.toFixed(2)}</strong>
+                  <strong>
+                    ${calculatedTotal.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </strong>
                 </div>
               </div>
             </div>

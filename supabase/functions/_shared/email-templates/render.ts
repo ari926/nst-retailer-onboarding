@@ -139,6 +139,132 @@ export function renderSampleInvoice(v: SampleInvoiceVars): string {
   return SHELL(`Sample invoice — ${v.storefrontName}`, body);
 }
 
+// ---------- Kickoff email (sent immediately after step 1 / profile submission) ----------
+//
+// Fires once per onboarding when the retailer finishes Step 1. Confirms
+// the profile is in, sets expectations for steps 2-7, and surfaces the
+// 10-day pickup floor so they don't pick a date we can't honor.
+//
+// Bilingual: language is selected by the caller from
+// retailer_onboardings.language ('en' | 'es').
+
+export interface KickoffVars {
+  contactFirstName: string;
+  storefrontName: string;
+  resumeUrl: string;
+  earliestPickupHuman: string; // "Monday, May 5" — pre-formatted in caller's locale
+  repName?: string;
+  repEmail?: string;
+  supportPhone?: string;
+  language: 'en' | 'es';
+}
+
+function kickoffEn(v: KickoffVars): { subject: string; html: string } {
+  const subject = `You're almost done setting up with NST — 6 quick steps left`;
+  const repBlock =
+    v.repName && v.repEmail
+      ? `<div class="note"><strong>Your rep:</strong> ${escapeHtml(v.repName)} &middot; ${escapeHtml(v.repEmail)}</div>`
+      : '';
+  const phoneBlock = v.supportPhone
+    ? `<p>Questions? Reply to this email or text us at <strong>${escapeHtml(v.supportPhone)}</strong>.</p>`
+    : `<p>Questions? Just reply to this email.</p>`;
+  const html = SHELL(
+    `Welcome to NST. Let's finish setting up ${v.storefrontName}.`,
+    `
+    <p>Hi ${escapeHtml(v.contactFirstName)},</p>
+    <p>Your store profile is in. Thank you.</p>
+    <p>To finish setting up your account, please complete the steps below.
+       It takes about 15 minutes and is fully self-serve.</p>
+
+    <div class="note" style="background:#f7fafa;border-left:3px solid #01696F;">
+      <strong style="display:block;margin-bottom:6px;text-transform:uppercase;font-size:12px;letter-spacing:0.04em;color:#01696F;">What's left</strong>
+      <ul style="margin:0;padding-left:18px;">
+        <li>Tell us about your safe and key holders</li>
+        <li>Add your bank info (we'll just need a voided check)</li>
+        <li>Walk through a sample deposit and change order</li>
+        <li>Set up invoicing</li>
+        <li>Pick your first pickup date</li>
+      </ul>
+    </div>
+
+    <div class="note" style="background:#fff8e6;border-left:3px solid #e0a800;color:#4a3e0e;">
+      <strong>One important thing:</strong> we need a minimum 10 calendar-day window
+      to schedule your first pickup, so the earliest date you'll see on the calendar
+      is <strong>${escapeHtml(v.earliestPickupHuman)}</strong>.
+    </div>
+
+    <p style="margin-top:20px;">
+      <a class="btn" href="${escapeHtml(v.resumeUrl)}">Finish my setup &rarr;</a>
+    </p>
+
+    <p>If you need to hand this off to someone else in the store, forward this
+       email — the link works for whoever opens it first.</p>
+
+    ${phoneBlock}
+
+    <p style="margin-top:24px;color:#6b7280;">— The NST team</p>
+
+    ${repBlock}
+    `,
+  );
+  return { subject, html };
+}
+
+function kickoffEs(v: KickoffVars): { subject: string; html: string } {
+  const subject = `Casi termina su configuración con NST — quedan 6 pasos rápidos`;
+  const repBlock =
+    v.repName && v.repEmail
+      ? `<div class="note"><strong>Su representante:</strong> ${escapeHtml(v.repName)} &middot; ${escapeHtml(v.repEmail)}</div>`
+      : '';
+  const phoneBlock = v.supportPhone
+    ? `<p>¿Preguntas? Responda a este correo o envíenos un mensaje al <strong>${escapeHtml(v.supportPhone)}</strong>.</p>`
+    : `<p>¿Preguntas? Solo responda a este correo.</p>`;
+  const html = SHELL(
+    `Bienvenido a NST. Terminemos de configurar ${v.storefrontName}.`,
+    `
+    <p>Hola ${escapeHtml(v.contactFirstName)},</p>
+    <p>Recibimos el perfil de su tienda. Gracias.</p>
+    <p>Para terminar de configurar su cuenta, complete los pasos a continuación.
+       Toma unos 15 minutos y lo puede hacer usted mismo.</p>
+
+    <div class="note" style="background:#f7fafa;border-left:3px solid #01696F;">
+      <strong style="display:block;margin-bottom:6px;text-transform:uppercase;font-size:12px;letter-spacing:0.04em;color:#01696F;">Lo que falta</strong>
+      <ul style="margin:0;padding-left:18px;">
+        <li>Información sobre su caja fuerte y quién tiene las llaves</li>
+        <li>Datos bancarios (solo necesitamos un cheque anulado)</li>
+        <li>Revisar un depósito y un pedido de cambio de muestra</li>
+        <li>Configurar la facturación</li>
+        <li>Elegir la fecha de su primera recolección</li>
+      </ul>
+    </div>
+
+    <div class="note" style="background:#fff8e6;border-left:3px solid #e0a800;color:#4a3e0e;">
+      <strong>Una cosa importante:</strong> necesitamos un mínimo de 10 días calendario
+      para agendar su primera recolección, así que la fecha más temprana que verá
+      en el calendario es <strong>${escapeHtml(v.earliestPickupHuman)}</strong>.
+    </div>
+
+    <p style="margin-top:20px;">
+      <a class="btn" href="${escapeHtml(v.resumeUrl)}">Terminar mi configuración &rarr;</a>
+    </p>
+
+    <p>Si necesita pasarle esto a otra persona en la tienda, reenvíe este
+       correo — el enlace funciona para quien lo abra primero.</p>
+
+    ${phoneBlock}
+
+    <p style="margin-top:24px;color:#6b7280;">— El equipo de NST</p>
+
+    ${repBlock}
+    `,
+  );
+  return { subject, html };
+}
+
+export function renderKickoff(v: KickoffVars): { subject: string; html: string } {
+  return v.language === 'es' ? kickoffEs(v) : kickoffEn(v);
+}
+
 // ---------- SFDC Flow templates (rendered by Salesforce, copied here for parity) ----------
 //
 // The four templates below mirror what the SFDC ops team will paste

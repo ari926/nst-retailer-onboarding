@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FormProvider, useForm } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Copy, Check } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
+import { Tooltip } from '../../components/ui/Tooltip';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import {
   step4Schema,
   step4Defaults,
@@ -17,7 +19,10 @@ import {
 } from './Step4Deposit.schema';
 
 /**
- * Step 4 — Sample deposit walkthrough.
+ * Step 3 (formerly Step 4) — Sample deposit walkthrough.
+ *
+ * Banking step was removed in V2 — file name kept (Step4Deposit) for stability
+ * but step number is now 3 throughout the user-facing flow and store state.
  *
  * Training simulation: retailer enters a fake $100 deposit (5 × $20 bills)
  * so they know what fields they'll see on day 1. Calculated total updates
@@ -56,7 +61,7 @@ export default function Step4Deposit() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const draft = await loadDraft<Step4Values>(4);
+      const draft = await loadDraft<Step4Values>(3);
       if (mounted && draft) reset(draft);
       setDraftLoaded(true);
     })();
@@ -67,28 +72,32 @@ export default function Step4Deposit() {
     if (!draftLoaded) return;
     const subscription = watch((values) => {
       const handle = setTimeout(() => {
-        void saveDraft(4, values);
+        void saveDraft(3, values);
       }, 1500);
       return () => clearTimeout(handle);
     });
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
 
-  const denomValues = watch('denominations');
-  const calculatedTotal = useMemo(() => {
-    if (!denomValues) return 0;
-    return DENOMINATIONS.reduce(
-      (sum, d) => sum + (Number(denomValues[d.key]) || 0) * d.value,
-      0,
-    );
-  }, [denomValues]);
+  // useWatch (instead of watch) reliably triggers a re-render on every
+  // keystroke for nested fields, regardless of the form's `mode` setting.
+  // Previous useMemo + watch combo would sometimes return a stable object
+  // reference and skip recomputing the bottom "Calculated total".
+  const denomValues = useWatch({
+    control: methods.control,
+    name: 'denominations',
+  });
+  const calculatedTotal = DENOMINATIONS.reduce(
+    (sum, d) => sum + (Number(denomValues?.[d.key]) || 0) * d.value,
+    0,
+  );
 
   const onSubmit = async (values: Step4Values) => {
     setSubmitting(true);
     try {
-      await submitStep(4, values);
-      markStepCompleted(4);
-      setCurrentStep(5);
+      await submitStep(3, values);
+      markStepCompleted(3);
+      setCurrentStep(4);
       toast.success(t('step_4_deposit.success'));
       navigate('/onboarding/change-order');
     } catch (err) {
@@ -107,9 +116,9 @@ export default function Step4Deposit() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
-          stepId={4}
+          stepId={3}
           titleKey="step_4_deposit.title"
           subtitleKey="step_4_deposit.subtitle"
           submitting={submitting}
@@ -171,6 +180,10 @@ export default function Step4Deposit() {
             <div className="field">
               <label htmlFor="bagNumber" className="field-label field-required">
                 {t('step_4_deposit.fields.bag_number')}
+                <Tooltip
+                  ariaLabel={t('step_4_deposit.fields.bag_tooltip_aria')}
+                  content={t('step_4_deposit.fields.bag_tooltip')}
+                />
               </label>
               <input
                 id="bagNumber"
@@ -206,7 +219,9 @@ export default function Step4Deposit() {
                         className="input"
                         type="number"
                         min="0"
-                        {...register(`denominations.${d.key}` as const)}
+                        {...register(`denominations.${d.key}` as const, {
+                          valueAsNumber: true,
+                        })}
                       />
                       <span className="denom-grid__subtotal">
                         ${(count * d.value).toFixed(2)}

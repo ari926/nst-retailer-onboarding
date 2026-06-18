@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { StepId, OnboardingState } from '../types/onboarding';
 import { STEPS, TOTAL_STEPS } from '../types/onboarding';
 
+
 interface OnboardingStore extends OnboardingState {
   setOnboarding: (partial: Partial<OnboardingState>) => void;
   markStepCompleted: (step: StepId) => void;

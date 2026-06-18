@@ -134,7 +134,7 @@ export default function OnboardingIndex() {
               )
             : t(
                 'onboarding.welcome_subtitle',
-                'Seven quick steps. You can save and come back anytime.',
+                'Six quick steps. You can save and come back anytime.',
               )}
         </p>
       </div>
@@ -148,7 +148,7 @@ export default function OnboardingIndex() {
                 <strong>
                   {t(
                     'onboarding.handoff.ready_title',
-                    'All 7 steps submitted',
+                    'All 6 steps submitted',
                   )}
                 </strong>
                 <p

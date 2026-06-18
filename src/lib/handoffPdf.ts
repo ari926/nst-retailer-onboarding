@@ -8,10 +8,13 @@ import type { StepId } from '../types/onboarding';
  * Produces the PDF that NST operations uses to physically set up a new store:
  *   - Storefront details + contacts (from Step 1)
  *   - Safe spec + key holder list (Step 2) — NB: combination is NEVER printed
- *   - Banking (Step 3) — only last-4 of account #; routing redacted
- *   - Sample deposit + change order results (Steps 4 & 5)
- *   - Invoicing contact + email (Step 6)
- *   - First pickup schedule OR deferred status (Step 7)
+ *   - Sample deposit results (Step 3)
+ *   - Sample change order results (Step 4)
+ *   - Invoicing contact + email (Step 5)
+ *   - First pickup schedule OR deferred status + day-of contact (Step 6)
+ *
+ * V2: Banking section removed entirely — banking step was deleted from the
+ * onboarding flow.
  *
  * Security constraint: we deliberately omit secrets (safe combos, full routing
  * and account numbers). Operators confirm those in-person during site visit.
@@ -63,37 +66,99 @@ interface Step2Payload {
   provisionalCredit?: boolean;
 }
 
+// Step 3 — Sample deposit (formerly Step 4)
 interface Step3Payload {
-  bankName?: string;
-  routingLast4?: string;
-  accountLast4?: string;
-  accountType?: string;
-  nameOnAccount?: string;
-}
-
-interface Step4Payload {
   date?: string;
   bagNumber?: string;
   total?: number;
+  amount?: number | string;
 }
 
-interface Step5Payload {
+// Step 4 — Sample change order (formerly Step 5)
+interface Step4Payload {
   deliveryDate?: string;
-  total?: number;
+  notes?: string;
+  bundles?: {
+    ones?: number;
+    fives?: number;
+    tens?: number;
+    twenties?: number;
+    fifties?: number;
+    hundreds?: number;
+  };
+  coinBoxes?: {
+    nickels?: number;
+    dimes?: number;
+    quarters?: number;
+  };
 }
 
-interface Step6Payload {
+// Step 5 — Invoicing contact (formerly Step 6)
+interface Step5Payload {
   contactName?: string;
   contactEmail?: string;
 }
 
-interface Step7Payload {
+// Step 6 — First pickup + day-of contact (formerly Step 7)
+interface Step6Payload {
   deferred?: boolean;
   preferredDate?: string;
   serviceDays?: string[];
   frequency?: string;
   timeWindow?: string;
   driverNotes?: string;
+  pickupContact?: {
+    fullName?: string;
+    mobilePhone?: string;
+    storePhone?: string;
+  };
+}
+
+// Per-bundle and per-box totals (kept in sync with Step5ChangeOrder.schema.ts)
+const BUNDLE_VALUES: Record<string, { label: string; mult: number }> = {
+  ones:     { label: '$1 bills',   mult: 100 },
+  fives:    { label: '$5 bills',   mult: 500 },
+  tens:     { label: '$10 bills',  mult: 1000 },
+  twenties: { label: '$20 bills',  mult: 2000 },
+  fifties:  { label: '$50 bills',  mult: 5000 },
+  hundreds: { label: '$100 bills', mult: 10000 },
+};
+
+const COIN_BOX_VALUES: Record<string, { label: string; mult: number }> = {
+  nickels:  { label: 'Nickels',  mult: 100 },
+  dimes:    { label: 'Dimes',    mult: 250 },
+  quarters: { label: 'Quarters', mult: 500 },
+};
+
+function sumChangeOrder(s: Step4Payload): {
+  rows: Array<[string, string]>;
+  total: number;
+} {
+  const rows: Array<[string, string]> = [];
+  let total = 0;
+  for (const [key, def] of Object.entries(BUNDLE_VALUES)) {
+    const count = Number(s.bundles?.[key as keyof typeof s.bundles] ?? 0) || 0;
+    if (count > 0) {
+      const sub = count * def.mult;
+      total += sub;
+      rows.push([
+        `${def.label} (× $${def.mult.toLocaleString('en-US')} per bundle)`,
+        `${count} bundle${count === 1 ? '' : 's'} → ${formatMoney(sub)}`,
+      ]);
+    }
+  }
+  for (const [key, def] of Object.entries(COIN_BOX_VALUES)) {
+    const count = Number(s.coinBoxes?.[key as keyof typeof s.coinBoxes] ?? 0) || 0;
+    if (count > 0) {
+      const sub = count * def.mult;
+      total += sub;
+      rows.push([
+        `${def.label} (× $${def.mult.toLocaleString('en-US')} per box)`,
+        `${count} box${count === 1 ? '' : 'es'} → ${formatMoney(sub)}`,
+      ]);
+    }
+  }
+  return { rows, total };
 }
 
 function formatMoney(n: number | undefined | null): string {
@@ -411,19 +476,17 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
 
-  // Step 3 — Banking
-  y = checkPageBreak(doc, y, 100);
-  y = drawSectionHeader(doc, '3. Banking', y);
+  // Step 3 — Sample deposit (formerly Step 4)
+  y = checkPageBreak(doc, y, 80);
+  y = drawSectionHeader(doc, '3. Sample deposit (dry run)', y);
   const s3 = readSubmission<Step3Payload>(3)?.payload;
   if (s3) {
     y = buildKvTable(
       doc,
       [
-        ['Bank', s3.bankName ?? '—'],
-        ['Account type', s3.accountType ?? '—'],
-        ['Name on account', s3.nameOnAccount ?? '—'],
-        ['Routing', s3.routingLast4 ? `•••• ${s3.routingLast4}` : '—'],
-        ['Account', s3.accountLast4 ? `•••• ${s3.accountLast4}` : '—'],
+        ['Deposit date', formatDate(s3.date)],
+        ['Bag number', s3.bagNumber ?? '—'],
+        ['Total', formatMoney(s3.total)],
       ],
       y,
     );
@@ -431,34 +494,36 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
 
-  // Step 4 — Sample deposit
-  y = checkPageBreak(doc, y, 80);
-  y = drawSectionHeader(doc, '4. Sample deposit (dry run)', y);
+  // Step 4 — Sample change order (formerly Step 5)
+  y = checkPageBreak(doc, y, 100);
+  y = drawSectionHeader(doc, '4. Sample change order (dry run)', y);
   const s4 = readSubmission<Step4Payload>(4)?.payload;
   if (s4) {
-    y = buildKvTable(
-      doc,
-      [
-        ['Deposit date', formatDate(s4.date)],
-        ['Bag number', s4.bagNumber ?? '—'],
-        ['Total', formatMoney(s4.total)],
-      ],
-      y,
-    );
+    const { rows, total } = sumChangeOrder(s4);
+    const tableRows: Array<[string, string]> = [
+      ['Delivery date', formatDate(s4.deliveryDate)],
+      ...rows,
+      ['Total', formatMoney(total)],
+    ];
+    if (s4.notes && s4.notes.trim()) {
+      tableRows.push(['Notes', s4.notes.trim()]);
+    }
+    y = buildKvTable(doc, tableRows, y);
   } else {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
 
-  // Step 5 — Sample change order
+  // Step 5 — Invoicing (formerly Step 6)
   y = checkPageBreak(doc, y, 80);
-  y = drawSectionHeader(doc, '5. Sample change order (dry run)', y);
+  y = drawSectionHeader(doc, '5. Invoicing contact', y);
   const s5 = readSubmission<Step5Payload>(5)?.payload;
   if (s5) {
     y = buildKvTable(
       doc,
       [
-        ['Delivery date', formatDate(s5.deliveryDate)],
-        ['Total', formatMoney(s5.total)],
+        ['Contact name', s5.contactName ?? '—'],
+        ['Email', s5.contactEmail ?? '—'],
+        ['Cadence', 'Weekly on Monday (Net 15)'],
       ],
       y,
     );
@@ -466,61 +531,44 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
 
-  // Step 6 — Invoicing
-  y = checkPageBreak(doc, y, 80);
-  y = drawSectionHeader(doc, '6. Invoicing contact', y);
+  // Step 6 — First pickup (formerly Step 7)
+  y = checkPageBreak(doc, y, 120);
+  y = drawSectionHeader(doc, '6. First pickup & day-of contact', y);
   const s6 = readSubmission<Step6Payload>(6)?.payload;
   if (s6) {
-    y = buildKvTable(
-      doc,
-      [
-        ['Contact name', s6.contactName ?? '—'],
-        ['Email', s6.contactEmail ?? '—'],
-        ['Cadence', 'Monthly on the 1st'],
-      ],
-      y,
-    );
-  } else {
-    y = buildKvTable(doc, [['Status', 'Not submitted']], y);
-  }
-
-  // Step 7 — First pickup
-  y = checkPageBreak(doc, y, 100);
-  y = drawSectionHeader(doc, '7. First pickup & ongoing service', y);
-  const s7 = readSubmission<Step7Payload>(7)?.payload;
-  if (s7) {
-    if (s7.deferred) {
-      y = buildKvTable(
-        doc,
-        [
-          ['Status', 'Deferred — retailer will confirm date later'],
-          ['Nudge cadence', 'Every 2 weeks (max 6 nudges = 12 weeks)'],
-        ],
-        y,
-      );
+    let scheduleRows: Array<[string, string]>;
+    if (s6.deferred) {
+      scheduleRows = [
+        ['Status', 'Deferred — retailer will confirm date later'],
+        ['Nudge cadence', 'Every 2 weeks (max 6 nudges = 12 weeks)'],
+      ];
     } else {
       const days =
-        s7.serviceDays?.map((d) => DAY_FULL[d] ?? d).join(', ') || '—';
-      y = buildKvTable(
-        doc,
+        s6.serviceDays?.map((d) => DAY_FULL[d] ?? d).join(', ') || '—';
+      scheduleRows = [
+        ['First pickup', formatDate(s6.preferredDate)],
+        ['Service days', days],
         [
-          ['First pickup', formatDate(s7.preferredDate)],
-          ['Service days', days],
-          [
-            'Frequency',
-            s7.frequency ? (FREQ_LABEL[s7.frequency] ?? s7.frequency) : '—',
-          ],
-          [
-            'Time window',
-            s7.timeWindow
-              ? (TIME_LABEL[s7.timeWindow] ?? s7.timeWindow)
-              : '—',
-          ],
-          ['Driver notes', s7.driverNotes?.trim() || '—'],
+          'Frequency',
+          s6.frequency ? (FREQ_LABEL[s6.frequency] ?? s6.frequency) : '—',
         ],
-        y,
-      );
+        [
+          'Time window',
+          s6.timeWindow
+            ? (TIME_LABEL[s6.timeWindow] ?? s6.timeWindow)
+            : '—',
+        ],
+        ['Driver notes', s6.driverNotes?.trim() || '—'],
+      ];
     }
+    // Day-of pickup contact — always rendered (required in both branches)
+    const pc = s6.pickupContact;
+    scheduleRows.push(
+      ['Day-of contact', pc?.fullName?.trim() || '—'],
+      ['Mobile phone', pc?.mobilePhone?.trim() || '—'],
+      ['Store phone', pc?.storePhone?.trim() || '—'],
+    );
+    y = buildKvTable(doc, scheduleRows, y);
   } else {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }

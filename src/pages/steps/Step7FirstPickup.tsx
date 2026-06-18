@@ -10,6 +10,7 @@ import { StepShell } from '../../components/ui/StepShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
+import { makeInvalidHandler } from '../../lib/formErrors';
 import {
   step7Schema,
   step7Defaults,
@@ -68,7 +69,7 @@ export default function Step7FirstPickup() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const draft = await loadDraft<Step7Values>(7);
+      const draft = await loadDraft<Step7Values>(6);
       if (mounted && draft) reset(draft);
       setDraftLoaded(true);
     })();
@@ -81,7 +82,7 @@ export default function Step7FirstPickup() {
     if (!draftLoaded) return;
     const subscription = watch((values) => {
       const handle = setTimeout(() => {
-        void saveDraft(7, values);
+        void saveDraft(6, values);
       }, 1500);
       return () => clearTimeout(handle);
     });
@@ -99,8 +100,8 @@ export default function Step7FirstPickup() {
   const onSubmit = async (values: Step7Values) => {
     setSubmitting(true);
     try {
-      await submitStep(7, values);
-      markStepCompleted(7);
+      await submitStep(6, values);
+      markStepCompleted(6);
       setSubmittedEmail(email ?? '');
       setSuccessMode(values.deferred ? 'deferred' : 'committed');
     } catch (err) {
@@ -124,7 +125,7 @@ export default function Step7FirstPickup() {
       <section className="stack stack-lg">
         <div className="step-header">
           <div className="step-header__eyebrow">
-            {t('nav.step_of', 'Step {current} of {total}', { current: 7, total: 7 })}
+            {t('nav.step_of', 'Step {current} of {total}', { current: 6, total: 6 })}
           </div>
           <h1>{t('step_7_launch.title')}</h1>
         </div>
@@ -152,9 +153,9 @@ export default function Step7FirstPickup() {
 
   return (
     <FormProvider {...methods}>
-      <form id="step-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="step-form" onSubmit={handleSubmit(onSubmit, makeInvalidHandler(t))} noValidate>
         <StepShell
-          stepId={7}
+          stepId={6}
           titleKey="step_7_launch.title"
           subtitleKey="step_7_launch.subtitle"
           submitting={submitting}
@@ -315,6 +316,70 @@ export default function Step7FirstPickup() {
               </div>
             </>
           )}
+
+          {/* Pickup contact — required in BOTH branches (commit + deferred). */}
+          <hr className="divider" />
+          <div className="field">
+            <h3 className="section-heading">
+              {t('step_7_launch.fields.pickup_contact_heading')}
+            </h3>
+            <p className="text-muted text-sm" style={{ marginBottom: 8 }}>
+              {t('step_7_launch.fields.pickup_contact_subhead')}
+            </p>
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="pickupFullName" className="field-label field-required">
+                {t('step_7_launch.fields.pickup_full_name')}
+              </label>
+              <input
+                id="pickupFullName"
+                className="input"
+                type="text"
+                autoComplete="name"
+                {...register('pickupContact.fullName')}
+              />
+              {errors.pickupContact?.fullName && (
+                <span className="field-error">
+                  {errors.pickupContact.fullName.message as string}
+                </span>
+              )}
+            </div>
+            <div className="field">
+              <label htmlFor="pickupMobilePhone" className="field-label field-required">
+                {t('step_7_launch.fields.pickup_mobile_phone')}
+              </label>
+              <input
+                id="pickupMobilePhone"
+                className="input"
+                type="tel"
+                autoComplete="tel"
+                {...register('pickupContact.mobilePhone')}
+              />
+              {errors.pickupContact?.mobilePhone && (
+                <span className="field-error">
+                  {errors.pickupContact.mobilePhone.message as string}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="pickupStorePhone" className="field-label">
+              {t('step_7_launch.fields.pickup_store_phone')}
+            </label>
+            <input
+              id="pickupStorePhone"
+              className="input"
+              type="tel"
+              autoComplete="tel"
+              {...register('pickupContact.storePhone')}
+            />
+            {errors.pickupContact?.storePhone && (
+              <span className="field-error">
+                {errors.pickupContact.storePhone.message as string}
+              </span>
+            )}
+          </div>
         </StepShell>
       </form>
     </FormProvider>

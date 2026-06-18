@@ -677,3 +677,59 @@
   color: #1e40af;
   font-style: italic;
 }
+
+/* Inline tooltip — hover/focus reveals a small bubble above an icon trigger.
+   Used for field-level help (e.g. Step 3 "Sealed bag number" help). */
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.tooltip-trigger {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: help;
+  color: var(--color-muted, #7a7974);
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+}
+.tooltip-trigger:hover,
+.tooltip-trigger:focus-visible {
+  color: var(--color-teal, #01696f);
+  outline: none;
+}
+.tooltip-trigger:focus-visible {
+  box-shadow: 0 0 0 2px rgba(1, 105, 111, 0.25);
+}
+.tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #28251d;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 8px 10px;
+  border-radius: 6px;
+  width: max-content;
+  max-width: 240px;
+  white-space: normal;
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #28251d;
+}
