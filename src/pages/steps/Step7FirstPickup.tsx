@@ -15,11 +15,9 @@ import {
   step7Defaults,
   earliestPickupDate,
   toIsoDate,
-  SERVICE_DAYS,
   TIME_WINDOWS,
   FREQUENCIES,
   type Step7Values,
-  type ServiceDay,
 } from './Step7FirstPickup.schema';
 
 /**
@@ -64,7 +62,6 @@ export default function Step7FirstPickup() {
   } = methods;
 
   const deferred = watch('deferred');
-  const serviceDays = watch('serviceDays') ?? [];
 
   useEffect(() => {
     let mounted = true;
@@ -88,14 +85,6 @@ export default function Step7FirstPickup() {
     });
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
-
-  const toggleDay = (day: ServiceDay) => {
-    const current = serviceDays;
-    const next = current.includes(day)
-      ? current.filter((d) => d !== day)
-      : [...current, day];
-    setValue('serviceDays', next, { shouldDirty: true, shouldValidate: true });
-  };
 
   const onSubmit = async (values: Step7Values) => {
     setSubmitting(true);
@@ -234,29 +223,10 @@ export default function Step7FirstPickup() {
                 )}
               </div>
 
-              <div className="field">
-                <span className="field-label">
-                  {t('step_7_launch.fields.service_days')}
-                </span>
-                <div className="chip-row">
-                  {SERVICE_DAYS.map((day) => (
-                    <button
-                      type="button"
-                      key={day}
-                      className={`chip ${serviceDays.includes(day) ? 'chip--active' : ''}`}
-                      onClick={() => toggleDay(day)}
-                      aria-pressed={serviceDays.includes(day)}
-                    >
-                      {t(`step_7_launch.day_short.${day}`)}
-                    </button>
-                  ))}
-                </div>
-                {errors.serviceDays && (
-                  <span className="field-error">
-                    {errors.serviceDays.message as string}
-                  </span>
-                )}
-              </div>
+              {/* "Ongoing service days" UI removed per Ari 2026-07-02.
+                  serviceDays field kept in schema (defaults to []) so the SF
+                  Opportunity.Pick_up_day__c writeback + handoff PDF path
+                  still work if the array is populated from elsewhere. */}
 
               <div className="field-row">
                 <div className="field">

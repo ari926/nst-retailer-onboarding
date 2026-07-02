@@ -82,13 +82,9 @@ export const step7Schema = z
       });
     }
 
-    if (!v.serviceDays || v.serviceDays.length === 0) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['serviceDays'],
-        message: 'Pick at least one ongoing service day',
-      });
-    }
+    // serviceDays UI was removed 2026-07-02. Field kept in the schema (as an
+    // optional array) so SF writeback + handoff PDF still work if populated
+    // elsewhere, but we no longer require at least one day from the user.
 
     if (!v.frequency) {
       ctx.addIssue({
