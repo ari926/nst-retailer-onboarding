@@ -62,7 +62,17 @@ export default function Home() {
       }
 
       // Real path — resolve the opaque token against the portal database.
-      const result = await resolveAndStoreToken(token, SUPABASE_PROJECT_URL);
+      // Wrap in try/catch so a thrown network/CORS error also surfaces a
+      // human-readable banner instead of hanging on the spinner forever.
+      let result;
+      try {
+        result = await resolveAndStoreToken(token, SUPABASE_PROJECT_URL);
+      } catch (err) {
+        if (cancelled) return;
+        setStatus('error');
+        setErrorDetail(err instanceof Error ? err.message : 'network_error');
+        return;
+      }
       if (cancelled) return;
 
       if ('error' in result) {
