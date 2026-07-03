@@ -40,6 +40,37 @@ const DAY_LABEL: Record<DayKey, string> = {
 
 type EditKey = 'business' | 'address' | 'hours' | 'owner' | 'manager';
 
+// Human-readable names for cards, used in the specific validation toast.
+// Keep in sync with the ReviewCard `id` prop below (`card-<key>`).
+const CARD_LABEL: Record<EditKey, string> = {
+  business: 'Business',
+  address: 'Address',
+  hours: 'Operating hours',
+  owner: 'Owner / Primary contact',
+  manager: 'Back-of-house manager',
+};
+
+// Map top-level RHF/Zod field paths to the card that owns them, so a failed
+// submit can visibly highlight the offending card and name it in the toast.
+function invalidCardsFromErrors(errors: Record<string, unknown>): Set<EditKey> {
+  const set = new Set<EditKey>();
+  if (!errors) return set;
+  if (errors.legalName || errors.storefrontName) set.add('business');
+  if (errors.street || errors.city || errors.state || errors.zip) set.add('address');
+  if (errors.hours) set.add('hours');
+  if (errors.primaryContact) set.add('owner');
+  if (errors.bohManager) set.add('manager');
+  return set;
+}
+
+function buildInvalidToast(invalid: Set<EditKey>): string {
+  const names = Array.from(invalid).map((k) => CARD_LABEL[k]);
+  if (names.length === 0) return 'Please fix the highlighted fields before continuing.';
+  if (names.length === 1) return `${names[0]} needs your attention before we can continue.`;
+  const last = names.pop();
+  return `Fix these sections before continuing: ${names.join(', ')} and ${last}.`;
+}
+
 export default function Step1Profile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -55,6 +86,9 @@ export default function Step1Profile() {
   const [editing, setEditing] = useState<Record<EditKey, boolean>>({
     business: false, address: false, hours: false, owner: false, manager: false,
   });
+  // Cards flagged by the last failed submit. Cleared when a card is opened for
+  // edit (user is fixing it) or when submit succeeds.
+  const [invalidCards, setInvalidCards] = useState<Set<EditKey>>(new Set());
 
   const ctx = useOnboardingContext(token);
 
@@ -119,11 +153,22 @@ export default function Step1Profile() {
     return () => subscription.unsubscribe();
   }, [watch, draftLoaded]);
 
-  const toggleEdit = (key: EditKey, on: boolean) =>
+  const toggleEdit = (key: EditKey, on: boolean) => {
     setEditing((prev) => ({ ...prev, [key]: on }));
+    // When the user opens a flagged card to fix it, drop the invalid state on
+    // that card so the red border doesn't linger while they're typing.
+    if (on && invalidCards.has(key)) {
+      setInvalidCards((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
 
   const onSubmit = async (values: Step1Values) => {
     setSubmitting(true);
+    setInvalidCards(new Set());
     try {
       await submitStep(1, values);
       setOnboarding({ storefrontName: values.storefrontName });
@@ -139,14 +184,28 @@ export default function Step1Profile() {
     }
   };
 
+  const onInvalid = (errors: Record<string, unknown>) => {
+    console.warn('[step submit] validation errors', errors);
+    const invalid = invalidCardsFromErrors(errors);
+    setInvalidCards(invalid);
+    toast.error(buildInvalidToast(invalid));
+    // Scroll the first invalid card into view so the user actually sees it.
+    const first = Array.from(invalid)[0];
+    if (first) {
+      // Wait a tick for the invalid class to be applied so the browser
+      // scrolls to the freshly-highlighted card.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`card-${first}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+  };
+
   return (
     <FormProvider {...methods}>
       <form
         id="step-form"
-        onSubmit={handleSubmit(onSubmit, (errors) => {
-          console.warn('[step submit] validation errors', errors);
-          toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
-        })}
+        onSubmit={handleSubmit(onSubmit, onInvalid)}
         noValidate
       >
         <StepShell
@@ -194,11 +253,11 @@ export default function Step1Profile() {
             )}
 
             <div className="review-grid">
-              <BusinessCard editing={editing.business} setEditing={(v) => toggleEdit('business', v)} onFile={provenance.business} />
-              <AddressCard editing={editing.address} setEditing={(v) => toggleEdit('address', v)} onFile={provenance.address} />
-              <HoursCard editing={editing.hours} setEditing={(v) => toggleEdit('hours', v)} />
-              <OwnerCard editing={editing.owner} setEditing={(v) => toggleEdit('owner', v)} onFile={provenance.owner} />
-              <ManagerCard editing={editing.manager} setEditing={(v) => toggleEdit('manager', v)} />
+              <BusinessCard editing={editing.business} setEditing={(v) => toggleEdit('business', v)} onFile={provenance.business} invalid={invalidCards.has('business')} />
+              <AddressCard editing={editing.address} setEditing={(v) => toggleEdit('address', v)} onFile={provenance.address} invalid={invalidCards.has('address')} />
+              <HoursCard editing={editing.hours} setEditing={(v) => toggleEdit('hours', v)} invalid={invalidCards.has('hours')} />
+              <OwnerCard editing={editing.owner} setEditing={(v) => toggleEdit('owner', v)} onFile={provenance.owner} invalid={invalidCards.has('owner')} />
+              <ManagerCard editing={editing.manager} setEditing={(v) => toggleEdit('manager', v)} invalid={invalidCards.has('manager')} />
             </div>
           </div>
         </StepShell>
@@ -276,6 +335,7 @@ function ReviewCard({
   editing,
   setEditing,
   span2 = false,
+  invalid = false,
   view,
   edit,
   onSave,
@@ -289,20 +349,27 @@ function ReviewCard({
   editing: boolean;
   setEditing: (v: boolean) => void;
   span2?: boolean;
+  invalid?: boolean;
   view: React.ReactNode;
   edit: React.ReactNode;
   onSave?: () => void;
 }) {
   const badgeClass =
+    invalid ? 'review-card__badge review-card__badge--invalid' :
     badgeVariant === 'warn' ? 'review-card__badge review-card__badge--warn' :
     badgeVariant === 'optional' ? 'review-card__badge review-card__badge--neutral' :
     'review-card__badge';
+  const displayBadge = invalid ? 'Needs your attention' : badge;
   return (
-    <section className={`review-card${editing ? ' editing' : ''}${span2 ? ' span-2' : ''}`} id={id}>
+    <section
+      className={`review-card${editing ? ' editing' : ''}${span2 ? ' span-2' : ''}${invalid ? ' invalid' : ''}`}
+      id={id}
+      aria-invalid={invalid || undefined}
+    >
       <header className="review-card__head">
         <div className="review-card__icon">{icon}</div>
         <h2 className="review-card__title">{title}</h2>
-        <span className={badgeClass}>{badge}</span>
+        <span className={badgeClass}>{displayBadge}</span>
         {!editing && (
           <button type="button" className="review-card__edit-btn" onClick={() => setEditing(true)}>
             {editLabel === 'Add' ? (
@@ -346,7 +413,7 @@ function ReviewCard({
  * Business card
  * ----------------------------------------------------------------------- */
 
-function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean }) {
+function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean; invalid?: boolean }) {
   const { register, watch } = useFormContext<Step1Values>();
   const legal = watch('legalName');
   const dba = watch('storefrontName');
@@ -359,6 +426,7 @@ function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => voi
       badgeVariant={props.onFile ? 'on-file' : 'optional'}
       editing={props.editing}
       setEditing={props.setEditing}
+      invalid={props.invalid}
       view={
         <dl className="kv">
           <dt>Legal entity</dt><dd>{legal || <span className="muted">—</span>}</dd>
@@ -385,7 +453,7 @@ function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => voi
  * Address card
  * ----------------------------------------------------------------------- */
 
-function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean }) {
+function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean; invalid?: boolean }) {
   const { register, watch } = useFormContext<Step1Values>();
   const street = watch('street');
   const suite = watch('suite');
@@ -401,6 +469,7 @@ function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void
       badgeVariant={props.onFile ? 'on-file' : 'optional'}
       editing={props.editing}
       setEditing={props.setEditing}
+      invalid={props.invalid}
       view={
         <dl className="kv">
           <dt>Street</dt>
@@ -445,7 +514,7 @@ function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void
  * Hours card (spans 2 columns)
  * ----------------------------------------------------------------------- */
 
-function HoursCard(props: { editing: boolean; setEditing: (v: boolean) => void }) {
+function HoursCard(props: { editing: boolean; setEditing: (v: boolean) => void; invalid?: boolean }) {
   const { control, watch, setValue, register } = useFormContext<Step1Values>();
   const hours = watch('hours');
 
@@ -478,6 +547,7 @@ function HoursCard(props: { editing: boolean; setEditing: (v: boolean) => void }
       badgeVariant="warn"
       editing={props.editing}
       setEditing={props.setEditing}
+      invalid={props.invalid}
       view={
         <>
           <div className="hours-summary">
@@ -583,7 +653,7 @@ function buildHoursSummary(hours: Step1Values['hours']) {
  * Owner / Primary contact card
  * ----------------------------------------------------------------------- */
 
-function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean }) {
+function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean; invalid?: boolean }) {
   const { register, watch, formState: { errors } } = useFormContext<Step1Values>();
   const name = watch('primaryContact.name');
   const email = watch('primaryContact.email');
@@ -599,6 +669,7 @@ function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; 
       badgeVariant={props.onFile ? 'on-file' : 'optional'}
       editing={props.editing}
       setEditing={props.setEditing}
+      invalid={props.invalid}
       view={
         <>
           <div className="person">
@@ -647,7 +718,7 @@ function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; 
  * Back-of-house manager card (optional)
  * ----------------------------------------------------------------------- */
 
-function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void }) {
+function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void; invalid?: boolean }) {
   const { register, watch, formState: { errors } } = useFormContext<Step1Values>();
   const name = watch('bohManager.name');
   const email = watch('bohManager.email');
@@ -665,6 +736,7 @@ function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void
       editLabel={hasAny ? 'Edit' : 'Add'}
       editing={props.editing}
       setEditing={props.setEditing}
+      invalid={props.invalid}
       view={
         hasAny ? (
           <>

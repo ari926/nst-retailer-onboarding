@@ -50,6 +50,18 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Invalid state — set on the offending card after a failed Step 1 submit.
+ * Uses a slightly heavier border + soft red-tinted header so the section is
+ * unmissable without shouting. The border color wins over .editing when both
+ * are present because .invalid appears later in the cascade. */
+.review-card.invalid {
+  border-color: var(--color-danger, #dc2626);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger, #dc2626) 15%, transparent);
+}
+.review-card.invalid .review-card__head {
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 6%, var(--bg-surface-alt, var(--neutral-100)));
+}
+
 .review-card__head {
   display: flex;
   align-items: center;
@@ -94,6 +106,11 @@
 .review-card__badge--neutral {
   background: var(--neutral-200);
   color: var(--text-secondary);
+}
+.review-card__badge--invalid {
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 12%, #fff);
+  color: var(--color-danger, #dc2626);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 30%, transparent);
 }
 
 .review-card__edit-btn {

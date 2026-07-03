@@ -168,12 +168,18 @@ Deno.serve(async (req) => {
   try {
     const sfToken = await getSalesforceAccessToken();
     const acctSoql = `SELECT Id, Name, BillingStreet, BillingCity, BillingState, BillingPostalCode, BillingCountry, Phone, Website FROM Account WHERE Id = '${tokRow.sfdc_account_id}' LIMIT 1`;
+    // When the token was minted without a specific sfdc_contact_id (e.g. via HQ's
+    // "Open portal as customer" flow), fall back to the most recently modified
+    // Contact on the SF Account so Step 1's Owner card can still pre-populate.
+    // This is read-only — the token row itself is not updated. If the account has
+    // no contacts, we still return { contact: null } and let the SPA render its
+    // "Add details" flow.
     const contactSoql = tokRow.sfdc_contact_id
       ? `SELECT Id, FirstName, LastName, Email, Phone, MobilePhone, Title FROM Contact WHERE Id = '${tokRow.sfdc_contact_id}' LIMIT 1`
-      : null;
+      : `SELECT Id, FirstName, LastName, Email, Phone, MobilePhone, Title FROM Contact WHERE AccountId = '${tokRow.sfdc_account_id}' ORDER BY LastModifiedDate DESC LIMIT 1`;
     const [acctRes, contactRes] = await Promise.all([
       sfQuery(sfToken, acctSoql),
-      contactSoql ? sfQuery(sfToken, contactSoql) : Promise.resolve({ records: [] } as SfQueryResult),
+      sfQuery(sfToken, contactSoql),
     ]);
     const account = acctRes?.records?.[0] ?? null;
     const contact = contactRes?.records?.[0] ?? null;
