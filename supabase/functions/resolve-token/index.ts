@@ -50,8 +50,14 @@ Deno.serve(async (req) => {
     return json(400, { error: 'invalid_json' });
   }
 
-  const token = body.token?.trim();
+  // Accept an optional 'hq_' prefix. HQ prepends it when generating
+  // admin magic links so the URL's first char is always a stable, non-
+  // ambiguous letter (avoiding lowercase-l vs capital-I confusion in
+  // sans-serif fonts). The prefix is presentational — the stored token
+  // itself is the raw part after the underscore.
+  let token = body.token?.trim();
   if (!token) return json(400, { error: 'missing_token' });
+  if (token.startsWith('hq_')) token = token.slice(3);
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
