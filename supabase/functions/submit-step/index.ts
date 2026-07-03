@@ -341,14 +341,32 @@ Deno.serve(async (req) => {
   // Advance current_step on retailer_onboardings if this is the highest step
   // they've completed so far. Await so the update actually flushes before the
   // edge function returns and Deno tears the request down.
+  //
+  // On Step 7 we also stamp:
+  //   - completed_at (now) — the moment the retailer finished onboarding.
+  //   - first_pickup_requested_date — the retailer's preferred first pickup
+  //     date (only if not deferred). Deferred flag mirrored into
+  //     launch_date_deferred for HQ / SF reporting.
   const nextStep = Math.max((onbRow.current_step ?? 0) + 1, stepNumber + 1);
+  const nowIso = new Date().toISOString();
+  const advanceUpdate: Record<string, unknown> = {
+    current_step: Math.min(nextStep, 7),
+    status: stepNumber >= 7 ? 'completed' : 'in_progress',
+    last_activity_at: nowIso,
+  };
+  if (stepNumber === 7) {
+    advanceUpdate.completed_at = nowIso;
+    const p7 = (payload ?? {}) as { preferredDate?: string; deferred?: boolean };
+    if (typeof p7.deferred === 'boolean') {
+      advanceUpdate.launch_date_deferred = p7.deferred;
+    }
+    if (!p7.deferred && typeof p7.preferredDate === 'string' && p7.preferredDate.length > 0) {
+      advanceUpdate.first_pickup_requested_date = p7.preferredDate;
+    }
+  }
   const { error: advErr } = await admin
     .from('retailer_onboardings')
-    .update({
-      current_step: Math.min(nextStep, 7),
-      status: stepNumber >= 7 ? 'completed' : 'in_progress',
-      last_activity_at: new Date().toISOString(),
-    })
+    .update(advanceUpdate)
     .eq('id', onbRow.id);
   if (advErr) console.error('[submit-step] advance current_step failed', advErr);
 

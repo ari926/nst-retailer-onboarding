@@ -24,7 +24,10 @@
 //   - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY                  (auto-injected)
 //   - HQ_PROGRESS_WEBHOOK_URL                                  HQ webhook URL
 //   - PORTAL_WEBHOOK_SECRET                                    shared HMAC secret
-//   - OPS_HANDOFF_TO_EMAIL          default 'operations@nationalsecuretransport.com'
+//   - OPS_HANDOFF_TO_EMAIL          default 'onboarding@nationalsecuretransport.com'
+//   - OPS_HANDOFF_CC_EMAILS         comma-separated list; defaults to the NST
+//                                    ops distribution (amanda, roger, doug,
+//                                    danny, robbie). Opp owner is auto-added.
 //   - OPS_HANDOFF_INTERNAL_SECRET   (optional) shared secret gate
 
 // deno-lint-ignore-file no-explicit-any
@@ -41,7 +44,24 @@ import { postToHq } from '../_shared/hq-bridge.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const TO_EMAIL =
-  Deno.env.get('OPS_HANDOFF_TO_EMAIL') ?? 'operations@nationalsecuretransport.com';
+  Deno.env.get('OPS_HANDOFF_TO_EMAIL') ?? 'onboarding@nationalsecuretransport.com';
+
+// Default Cc: the five ops teammates who should also see every handoff.
+// Overridable via OPS_HANDOFF_CC_EMAILS (comma-separated). Opp owner is
+// merged in at send time.
+const DEFAULT_OPS_CC = [
+  'amanda@nationalsecuretransport.com',
+  'roger@nationalsecuretransport.com',
+  'doug@nationalsecuretransport.com',
+  'danny@nationalsecuretransport.com',
+  'robbie@nationalsecuretransport.com',
+];
+const OPS_CC_EMAILS: string[] = (Deno.env.get('OPS_HANDOFF_CC_EMAILS') ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter((s) => s.length > 0);
+const OPS_CC: string[] = OPS_CC_EMAILS.length > 0 ? OPS_CC_EMAILS : DEFAULT_OPS_CC;
+
 const INTERNAL_SECRET = Deno.env.get('OPS_HANDOFF_INTERNAL_SECRET') ?? '';
 
 const BACKOFF_SECONDS = [60, 300, 1200, 3600, 7200]; // 1m → 5m → 20m → 1h → 2h
@@ -271,9 +291,21 @@ async function processJob(
         .eq('id', job.id);
     }
 
-    // 6) Look up Opp owner to CC them.
+    // 6) Build recipient list: static ops Cc + Opp owner (deduped, lowercased).
     const owner = await getOpportunityOwner(token, onb.sfdc_opportunity_id);
-    const ccList = owner.email ? [owner.email] : [];
+    const ccCandidates = [...OPS_CC];
+    if (owner.email) ccCandidates.push(owner.email);
+    const toLower = TO_EMAIL.trim().toLowerCase();
+    const seen = new Set<string>([toLower]);
+    const ccList: string[] = [];
+    for (const raw of ccCandidates) {
+      const e = (raw ?? '').trim();
+      if (!e) continue;
+      const key = e.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ccList.push(e);
+    }
 
     // 7) POST to HQ with the rendered email + PDF attachment.
     const retailerName =
