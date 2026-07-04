@@ -38,13 +38,21 @@ const json = (status: number, body: unknown) =>
     headers: { ...corsHeaders, 'content-type': 'application/json' },
   });
 
+// Token alphabet: base58-ish. Deliberately omits the lookalike characters
+// I, l, 1, O, 0 so tokens can be read over the phone, copied out of emails,
+// or squinted at without confusion. Keep this in sync with mint-onboarding-token.
+const TOKEN_ALPHABET =
+  'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+const TOKEN_LEN = 42;
+
 function randomToken(): string {
-  const buf = new Uint8Array(32);
+  const buf = new Uint8Array(TOKEN_LEN);
   crypto.getRandomValues(buf);
-  return btoa(String.fromCharCode(...buf))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
+  let out = '';
+  for (let i = 0; i < TOKEN_LEN; i++) {
+    out += TOKEN_ALPHABET[buf[i] % TOKEN_ALPHABET.length];
+  }
+  return out;
 }
 
 Deno.serve(async (req) => {
@@ -117,7 +125,7 @@ Deno.serve(async (req) => {
   return json(200, {
     token,
     expires_at: expiresAt,
-    portal_url: `${PORTAL_BASE_URL}/?t=${token}`,
+    portal_url: `${PORTAL_BASE_URL}/?t=hq_${token}`,
     source: 'admin_access',
   });
 });

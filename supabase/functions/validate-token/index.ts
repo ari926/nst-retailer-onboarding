@@ -33,8 +33,10 @@ Deno.serve(async (req) => {
 
   let body: { token?: string };
   try { body = JSON.parse(rawBody); } catch { return json(400, { error: 'invalid_json' }); }
-  const token = body.token;
+  let token = body.token;
   if (!token) return json(400, { error: 'missing_token' });
+  // Strip display-only 'hq_' prefix so lookups match the raw stored token.
+  if (token.startsWith('hq_')) token = token.slice(3);
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,

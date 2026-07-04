@@ -260,12 +260,14 @@ Deno.serve(async (req) => {
     return json(400, { error: 'invalid_json' });
   }
 
-  const token = (body.token ?? '').trim();
+  let token = (body.token ?? '').trim();
   const stepNumber = body.step_number;
   const kind = body.kind ?? 'submit';
   const payload = body.payload;
 
   if (!token) return json(400, { error: 'missing_token' });
+  // Strip display-only 'hq_' prefix so lookups match the raw stored token.
+  if (token.startsWith('hq_')) token = token.slice(3);
   if (typeof stepNumber !== 'number' || stepNumber < 1 || stepNumber > 7) {
     return json(400, { error: 'invalid_step_number' });
   }

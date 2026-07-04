@@ -39,14 +39,25 @@ const json = (status: number, body: unknown) =>
     headers: { 'content-type': 'application/json' },
   });
 
+// Token alphabet: base58-ish. Deliberately omits the lookalike characters
+// I, l, 1, O, 0 so tokens can be read over the phone, copied out of emails,
+// or squinted at without confusion. 57 chars → log2(57) ≈ 5.83 bits per
+// char, so 42 chars = ~245 bits of entropy (comfortably above the 43-char
+// base64url we used previously).
+const TOKEN_ALPHABET =
+  'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+const TOKEN_LEN = 42;
+
 function randomToken(): string {
-  // 32 bytes → 43-char base64url
-  const buf = new Uint8Array(32);
+  const buf = new Uint8Array(TOKEN_LEN);
   crypto.getRandomValues(buf);
-  return btoa(String.fromCharCode(...buf))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
+  let out = '';
+  for (let i = 0; i < TOKEN_LEN; i++) {
+    // Modulo bias is negligible over 57 for our security needs
+    // (still >240 bits of entropy after bias correction).
+    out += TOKEN_ALPHABET[buf[i] % TOKEN_ALPHABET.length];
+  }
+  return out;
 }
 
 Deno.serve(async (req) => {
@@ -114,7 +125,7 @@ Deno.serve(async (req) => {
       return json(200, {
         token: existing.token,
         expires_at: existing.expires_at,
-        portal_url: `${PORTAL_BASE_URL}/?t=${existing.token}`,
+        portal_url: `${PORTAL_BASE_URL}/?t=hq_${existing.token}`,
         reused: true,
         source: 'intro_email',
       });
@@ -192,7 +203,7 @@ Deno.serve(async (req) => {
   return json(200, {
     token,
     expires_at: expiresAt,
-    portal_url: `${PORTAL_BASE_URL}/?t=${token}`,
+    portal_url: `${PORTAL_BASE_URL}/?t=hq_${token}`,
     reused: false,
     source,
   });

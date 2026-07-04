@@ -135,8 +135,11 @@ Deno.serve(async (req) => {
   } catch {
     return json(400, { error: 'invalid_json' });
   }
-  const token = (body.token ?? '').trim();
+  let token = (body.token ?? '').trim();
   if (!token) return json(400, { error: 'missing_token' });
+  // Strip the display-only 'hq_' prefix (added by mint-onboarding-token and
+  // hq-mint-portal-token). Kept out of the DB so lookups match the raw token.
+  if (token.startsWith('hq_')) token = token.slice(3);
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
