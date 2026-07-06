@@ -6,6 +6,7 @@ import { useOnboardingStore } from '../stores/onboardingStore';
 import { resolveAndStoreToken } from '../lib/tokenSession';
 import { SUPABASE_PROJECT_URL } from '../lib/supabase';
 import { isDemoMode } from '../lib/demoMode';
+import { resetOnboardingClientState } from '../lib/resetClientState';
 
 type TokenStatus = 'idle' | 'resolving' | 'invalid' | 'expired' | 'revoked' | 'error';
 
@@ -28,6 +29,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const setOnboarding = useOnboardingStore((s) => s.setOnboarding);
+  const resetOnboarding = useOnboardingStore((s) => s.reset);
 
   const token = params.get('t');
   const demo = isDemoMode();
@@ -87,6 +89,23 @@ export default function Home() {
         return;
       }
 
+      // Guard against stale client state bleeding between customers.
+      //
+      // The Zustand store persists to localStorage (nst_onboarding_state) and
+      // stepService.ts mirrors drafts + submissions to localStorage under the
+      // `nst_mock_step_*` namespace. Without a reset, an admin who opens
+      // Customer A's portal and later opens Customer B's would still see
+      // Customer A's storefrontName, completedSteps, address draft, and
+      // progress bar.
+      //
+      // Reset whenever the resolved token points at a different SF Account
+      // than what's cached, and always reset for admin_access sessions so
+      // admins get a clean view of each customer they're inspecting.
+      const prevAccountId = useOnboardingStore.getState().sfdcAccountId;
+      if (prevAccountId !== result.sfdc_account_id || result.source === 'admin_access') {
+        resetOnboardingClientState();
+        resetOnboarding();
+      }
       setOnboarding({
         sfdcAccountId: result.sfdc_account_id,
         currentStep: 1,
@@ -97,7 +116,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [token, navigate, setOnboarding]);
+  }, [token, navigate, setOnboarding, resetOnboarding]);
 
   const toggleLang = () => {
     const next = i18n.language.startsWith('es') ? 'en' : 'es';
