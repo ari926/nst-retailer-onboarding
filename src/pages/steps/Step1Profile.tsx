@@ -275,13 +275,29 @@ function mergePrefill(current: Step1Values, ctx: OnboardingContext): Step1Values
   const contact = ctx.prefill?.contact ?? null;
   const acctName = account?.Name ?? ctx.token.account_name ?? '';
 
+  // State is special: the RHF default is 'PA' (schema requires a valid enum
+  // value, so we can't cleanly default to ''). That means the usual
+  // `current || sf` pattern short-circuits and SF's real state never wins on
+  // a fresh session — a New-Jersey customer would see "PA" until they
+  // manually corrected it.
+  //
+  // If the customer hasn't started onboarding yet (no row in the onboardings
+  // table), prefer SF's state whenever SF returns a value we can normalize.
+  // Once an onboarding row exists we treat any typed state as intentional and
+  // leave `current.state` alone — draft-load will already have re-hydrated
+  // any value the customer previously entered.
+  const onboardingStarted = ctx.onboarding != null;
+  const sfState = account?.BillingState ? normalizeState(account.BillingState) : null;
+  const resolvedState =
+    !onboardingStarted && sfState ? sfState : current.state;
+
   const next: Step1Values = {
     ...current,
     legalName: current.legalName || acctName,
     storefrontName: current.storefrontName || acctName,
     street: current.street || (account?.BillingStreet ?? ''),
     city: current.city || (account?.BillingCity ?? ''),
-    state: (current.state || normalizeState(account?.BillingState)) as Step1Values['state'],
+    state: resolvedState as Step1Values['state'],
     zip: current.zip || (account?.BillingPostalCode ?? ''),
     primaryContact: {
       name: current.primaryContact.name || joinName(contact?.FirstName, contact?.LastName),
