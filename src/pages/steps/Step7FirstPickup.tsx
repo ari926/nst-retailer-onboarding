@@ -77,13 +77,17 @@ export default function Step7FirstPickup() {
 
   useEffect(() => {
     if (!draftLoaded) return;
+    let handle: ReturnType<typeof setTimeout> | null = null;
     const subscription = watch((values) => {
-      const handle = setTimeout(() => {
+      if (handle) clearTimeout(handle);
+      handle = setTimeout(() => {
         void saveDraft(7, values);
       }, 1500);
-      return () => clearTimeout(handle);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      if (handle) clearTimeout(handle);
+      subscription.unsubscribe();
+    };
   }, [watch, draftLoaded]);
 
   const onSubmit = async (values: Step7Values) => {

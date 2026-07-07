@@ -66,13 +66,17 @@ export default function Step4Deposit() {
 
   useEffect(() => {
     if (!draftLoaded) return;
+    let handle: ReturnType<typeof setTimeout> | null = null;
     const subscription = watch((values) => {
-      const handle = setTimeout(() => {
+      if (handle) clearTimeout(handle);
+      handle = setTimeout(() => {
         void saveDraft(4, values);
       }, 1500);
-      return () => clearTimeout(handle);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      if (handle) clearTimeout(handle);
+      subscription.unsubscribe();
+    };
   }, [watch, draftLoaded]);
 
   // Inline calc — useMemo with [denomValues] deps misses nested mutations

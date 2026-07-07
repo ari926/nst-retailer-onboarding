@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
   }
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
 
-  let body: { token?: string; step_number?: number; kind?: 'draft' | 'submit'; payload?: unknown } = {};
+  let body: { token?: string; step_number?: number; kind?: 'draft' | 'submit' | 'load'; payload?: unknown } = {};
   try {
     const text = await req.text();
     if (text) body = JSON.parse(text);
@@ -271,8 +271,9 @@ Deno.serve(async (req) => {
   if (typeof stepNumber !== 'number' || stepNumber < 1 || stepNumber > 7) {
     return json(400, { error: 'invalid_step_number' });
   }
-  if (kind !== 'draft' && kind !== 'submit') return json(400, { error: 'invalid_kind' });
-  if (!payload || typeof payload !== 'object') return json(400, { error: 'missing_payload' });
+  if (kind !== 'draft' && kind !== 'submit' && kind !== 'load') return json(400, { error: 'invalid_kind' });
+  // 'load' does not require a payload — it only reads the latest draft.
+  if (kind !== 'load' && (!payload || typeof payload !== 'object')) return json(400, { error: 'missing_payload' });
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -297,6 +298,42 @@ Deno.serve(async (req) => {
 
   if (onbErr) return json(500, { error: 'onboarding_lookup_failed', detail: onbErr.message });
   if (!onbRow) return json(404, { error: 'onboarding_not_found' });
+
+  // Load path — return the latest saved draft (or submitted payload) for this step.
+  // Prefers the most-recent step_submissions row (source of truth for confirmed data)
+  // and falls back to the step_drafts row for in-progress edits.
+  if (kind === 'load') {
+    const { data: submissionRow } = await admin
+      .from('step_submissions')
+      .select('payload, submitted_at')
+      .eq('onboarding_id', onbRow.id)
+      .eq('step_number', stepNumber)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: draftRow } = await admin
+      .from('step_drafts')
+      .select('draft_data, updated_at')
+      .eq('onboarding_id', onbRow.id)
+      .eq('step_number', stepNumber)
+      .maybeSingle();
+
+    // Pick whichever is newer. Draft is usually more recent because the user
+    // may have edited after last Confirm & continue on a revisit.
+    const subTime = submissionRow?.submitted_at ? new Date(submissionRow.submitted_at).getTime() : 0;
+    const draftTime = draftRow?.updated_at ? new Date(draftRow.updated_at).getTime() : 0;
+    let payload: unknown = null;
+    let source: 'draft' | 'submission' | null = null;
+    if (draftRow && draftTime >= subTime) {
+      payload = draftRow.draft_data;
+      source = 'draft';
+    } else if (submissionRow) {
+      payload = submissionRow.payload;
+      source = 'submission';
+    }
+    return json(200, { ok: true, payload, source });
+  }
 
   // Draft path — upsert into step_drafts.
   if (kind === 'draft') {

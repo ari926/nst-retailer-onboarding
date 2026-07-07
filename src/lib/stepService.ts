@@ -58,16 +58,19 @@ function readToken(): string | null {
   return null;
 }
 
-async function callSubmitStep(stepNumber: number, kind: 'draft' | 'submit', payload: unknown) {
+async function callSubmitStep(stepNumber: number, kind: 'draft' | 'submit' | 'load', payload: unknown) {
   const token = readToken();
   if (!token) {
     // No token — we're not in token-kickoff mode. Caller should fall back.
     throw new Error('no_token');
   }
+  const body: Record<string, unknown> = { token, step_number: stepNumber, kind };
+  // 'load' does not send a payload — it only reads.
+  if (kind !== 'load') body.payload = payload;
   const resp = await fetch(`${FUNCTIONS_URL}/functions/v1/submit-step`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ token, step_number: stepNumber, kind, payload }),
+    body: JSON.stringify(body),
   });
   if (!resp.ok) {
     let detail = `http_${resp.status}`;
@@ -116,14 +119,34 @@ export async function loadDraft<T>(stepId: StepId): Promise<T | null> {
     return getDemoPayload<T>(stepId);
   }
 
+  // Token-driven mode: pull the latest draft (or submission) from the server
+  // so form values survive page reloads. This is the fix for the "Owner edits
+  // are lost on refresh unless Confirm & continue succeeds" bug.
+  if (readToken()) {
+    try {
+      const resp = await callSubmitStep(stepId, 'load', undefined);
+      const payload = (resp as { payload?: T | null } | undefined)?.payload;
+      if (payload && typeof payload === 'object') {
+        // Also mirror into localStorage (when mock mode is on) so the local
+        // stepper UI can restore quickly on subsequent renders.
+        if (MOCK_AUTH_ENABLED) {
+          try { localStorage.setItem(mockKey(stepId, 'draft'), JSON.stringify(payload)); } catch { /* ignore */ }
+        }
+        return payload as T;
+      }
+    } catch (e) {
+      console.warn('[stepService] server draft load failed, falling back to localStorage', e);
+    }
+  }
+
+  // Fallback — localStorage mirror. Only populated when MOCK_AUTH is on or
+  // when the server-side load above has stashed a copy.
   if (MOCK_AUTH_ENABLED) {
     const raw = localStorage.getItem(mockKey(stepId, 'draft'));
     if (raw) {
       try { return JSON.parse(raw) as T; } catch { /* fall through */ }
     }
   }
-  // (Server-side draft hydration via token is a future enhancement; right
-  // now the prefill path covers fresh sessions and localStorage covers reloads.)
   return null;
 }
 

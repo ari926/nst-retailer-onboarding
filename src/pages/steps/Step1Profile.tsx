@@ -141,16 +141,26 @@ export default function Step1Profile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftLoaded, ctx.data]);
 
-  // Autosave after 1.5s of no changes
+  // Autosave after 1.5s of no changes. RHF's watch() calls the subscriber on
+  // every change but does not itself debounce, so we track one shared timer
+  // and reset it on each keystroke. Without this the previous implementation
+  // never actually debounced (the returned cleanup was never invoked by RHF)
+  // and, more importantly, each field change fired an independent save with
+  // stale values — the practical effect users hit was "my Owner edits didn't
+  // persist on refresh" because the last save often lost the race.
   useEffect(() => {
     if (!draftLoaded) return;
+    let handle: ReturnType<typeof setTimeout> | null = null;
     const subscription = watch((values) => {
-      const handle = setTimeout(() => {
+      if (handle) clearTimeout(handle);
+      handle = setTimeout(() => {
         void saveDraft(1, values);
       }, 1500);
-      return () => clearTimeout(handle);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      if (handle) clearTimeout(handle);
+      subscription.unsubscribe();
+    };
   }, [watch, draftLoaded]);
 
   const toggleEdit = (key: EditKey, on: boolean) => {

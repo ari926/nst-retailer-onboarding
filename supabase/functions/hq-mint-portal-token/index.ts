@@ -122,6 +122,51 @@ Deno.serve(async (req) => {
     return json(500, { error: 'token_insert_failed', detail: insertErr.message });
   }
 
+  // --- Provision retailer_onboardings row ----------------------------------
+  // Mirror the mint-onboarding-token behavior: step_submissions / step_drafts
+  // logically belong to a retailer_onboardings row keyed by
+  // (sfdc_account_id, sfdc_opportunity_id). Without this row, submit-step
+  // returns 404 `onboarding_not_found`, so an admin who clicks
+  // "Open portal as customer" on a brand-new NST account can view Step 1
+  // fine but every Confirm & continue click 404s silently.
+  //
+  // Idempotent: ignoreDuplicates leaves any in-flight progress untouched if
+  // the customer has already started onboarding via their intro email.
+  //
+  // Non-fatal: if provisioning errors we still return the token — the token
+  // insert already succeeded and the admin needs their portal link. We log
+  // for later cleanup.
+  try {
+    const { error: provErr } = await admin
+      .from('retailer_onboardings')
+      .upsert(
+        {
+          sfdc_account_id: accountId,
+          sfdc_opportunity_id: opportunityId,
+          retailer_email: (body?.contact_email as string | undefined) ?? null,
+          retailer_first_name: null,
+          retailer_last_name: null,
+          store_name: null,
+          language: 'en',
+          current_step: 1,
+          status: 'in_progress',
+        },
+        { onConflict: 'sfdc_account_id', ignoreDuplicates: true },
+      );
+    if (provErr) {
+      console.error(
+        '[hq-mint-portal-token] retailer_onboardings provision failed',
+        provErr,
+      );
+    }
+  } catch (e) {
+    console.error(
+      '[hq-mint-portal-token] retailer_onboardings provision threw',
+      e,
+    );
+  }
+  // --- end provision -------------------------------------------------------
+
   return json(200, {
     token,
     expires_at: expiresAt,
