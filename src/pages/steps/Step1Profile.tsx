@@ -291,15 +291,18 @@ function mergePrefill(current: Step1Values, ctx: OnboardingContext): Step1Values
   // a fresh session — a New-Jersey customer would see "PA" until they
   // manually corrected it.
   //
-  // If the customer hasn't started onboarding yet (no row in the onboardings
-  // table), prefer SF's state whenever SF returns a value we can normalize.
-  // Once an onboarding row exists we treat any typed state as intentional and
-  // leave `current.state` alone — draft-load will already have re-hydrated
-  // any value the customer previously entered.
-  const onboardingStarted = ctx.onboarding != null;
+  // Previously we only preferred SF when `ctx.onboarding == null`, but the
+  // hq-mint-portal-token flow provisions the onboardings row up front so
+  // admin-opened portals were ALWAYS treated as "started" and defaulted to
+  // the RHF default 'PA'. The portal then wrote 'PA' back to SF on Step 1
+  // submit, clobbering the real BillingState.
+  //
+  // New rule: only trust `current.state` as user intent if Step 1 has
+  // actually been confirmed at least once. Before that, always prefer SF.
+  const step1Confirmed = (ctx.onboarding?.current_step ?? 1) > 1;
   const sfState = account?.BillingState ? normalizeState(account.BillingState) : null;
   const resolvedState =
-    !onboardingStarted && sfState ? sfState : current.state;
+    !step1Confirmed && sfState ? sfState : current.state;
 
   const next: Step1Values = {
     ...current,
