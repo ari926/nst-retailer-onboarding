@@ -4,7 +4,7 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Building2, Info } from 'lucide-react';
+import { Building2, Info, PackageOpen, Search, ClipboardList, ShoppingCart } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
@@ -169,6 +169,9 @@ export default function Step5ChangeOrder() {
             fives: Number(b.fives) || 0,
             tens: Number(b.tens) || 0,
             twenties: Number(b.twenties) || 0,
+            // Legacy drafts predate 2026-07-26 change set (no $50/$100 fields).
+            fifties: 0,
+            hundreds: 0,
             // Coin rolls don't cleanly map to Amanda's unit rules — leave at 0.
             quarters: 0,
             dimes: 0,
@@ -216,12 +219,15 @@ export default function Step5ChangeOrder() {
   const fives = Number(watch('units.fives')) || 0;
   const tens = Number(watch('units.tens')) || 0;
   const twenties = Number(watch('units.twenties')) || 0;
+  // 2026-07-26 change set: $50 and $100 added per Amanda + Doug.
+  const fifties = Number(watch('units.fifties')) || 0;
+  const hundreds = Number(watch('units.hundreds')) || 0;
   const quarters = Number(watch('units.quarters')) || 0;
   const dimes = Number(watch('units.dimes')) || 0;
   const nickels = Number(watch('units.nickels')) || 0;
   const arrivalDate = watch('arrivalDate');
   // Keep a live `units` object for row-level subtotal display.
-  const units = { ones, fives, tens, twenties, quarters, dimes, nickels };
+  const units = { ones, fives, tens, twenties, fifties, hundreds, quarters, dimes, nickels };
   const totals = sumChangeOrderUsd(units);
 
   const onSubmit = async (values: Step5Values) => {
@@ -256,9 +262,64 @@ export default function Step5ChangeOrder() {
           subtitleKey="step_5_change_order.subtitle"
           submitting={submitting}
           submitLabelKey="step_5_change_order.submit"
+          hideSubmit
+          footerActions={
+            <>
+              {/* 2026-07-26 (Amanda + Doug): Cash Services parity — Confirm / Cancel buttons.
+                  Cancel just resets the form; the standard Back button still lives in the
+                  StepShell footer on the left. */}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => reset({ ...step5Defaults, arrivalDate: arrivalOptions[0] ?? '' })}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="step-form"
+                className="btn btn-primary"
+                disabled={submitting}
+              >
+                {submitting ? <span className="spinner" aria-hidden /> : 'Confirm'}
+              </button>
+            </>
+          }
         >
           <SimulationBanner customer={headerInfo.name} />
 
+          {/* 2026-07-26 (Amanda + Doug): Cash Services portal clone — left rail + main.
+              Only "Create change order" is active during onboarding. */}
+          <div className="cash-shell">
+            <nav className="cit-sidenav" aria-label="Cash Services sections">
+              <div className="cit-sidenav__group">
+                <div className="cit-sidenav__section">Deposits</div>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <PackageOpen size={14} /> Search deposits
+                </button>
+                <div className="cit-sidenav__section">Change orders</div>
+                <button type="button" className="cit-sidenav__item cit-sidenav__item--active">
+                  <ShoppingCart size={14} /> Create change order
+                </button>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <Search size={14} /> Search change orders
+                </button>
+                <div className="cit-sidenav__section">Reports</div>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ClipboardList size={14} /> Deposit summary report
+                </button>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ClipboardList size={14} /> Order summary report
+                </button>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ClipboardList size={14} /> Customer profiles report
+                </button>
+              </div>
+              <p className="cit-sidenav__hint">Training view — only Create change order is active during onboarding.</p>
+            </nav>
+
+            <div className="cash-shell__body stack stack-md">
           <HeaderBar
             info={headerInfo}
             arrivalOptions={arrivalOptions}
@@ -280,7 +341,7 @@ export default function Step5ChangeOrder() {
               <Info size={14} />
               <div>
                 <strong>Units are delivered whole — not divided.</strong>{' '}
-                One $20 unit = $2,000. One quarter unit = $500.
+                One $20 unit = $2,000. One $50 unit = $5,000. One $100 unit = $10,000. One quarter unit = $500.
               </div>
             </div>
 
@@ -336,6 +397,8 @@ export default function Step5ChangeOrder() {
             <div className="field">
               <label htmlFor="comments" className="field-label">Comments</label>
               <textarea id="comments" className="textarea" rows={2} {...register('comments')} />
+            </div>
+          </div>
             </div>
           </div>
         </StepShell>

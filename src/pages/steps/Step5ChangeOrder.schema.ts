@@ -15,14 +15,19 @@ import { z } from 'zod';
  */
 
 // Amanda-provided unit definitions. `unitValue` = dollars per unit.
+// 2026-07-26 change set (Amanda + Doug):
+//   Added $50 and $100 denominations. Unit values follow the strap convention
+//   (5,000 and 10,000 per strap respectively) confirmed by Ari.
 export const CHANGE_ORDER_DENOMS = [
-  { key: 'ones',      label: '$1 bills',  unitValue: 100  },
-  { key: 'fives',     label: '$5 bills',  unitValue: 500  },
-  { key: 'tens',      label: '$10 bills', unitValue: 1000 },
-  { key: 'twenties',  label: '$20 bills', unitValue: 2000 },
-  { key: 'quarters',  label: 'Quarters',  unitValue: 500  },
-  { key: 'dimes',     label: 'Dimes',     unitValue: 250  },
-  { key: 'nickels',   label: 'Nickels',   unitValue: 100  },
+  { key: 'ones',      label: '$1 bills',   unitValue: 100   },
+  { key: 'fives',     label: '$5 bills',   unitValue: 500   },
+  { key: 'tens',      label: '$10 bills',  unitValue: 1000  },
+  { key: 'twenties',  label: '$20 bills',  unitValue: 2000  },
+  { key: 'fifties',   label: '$50 bills',  unitValue: 5000  },
+  { key: 'hundreds',  label: '$100 bills', unitValue: 10000 },
+  { key: 'quarters',  label: 'Quarters',   unitValue: 500   },
+  { key: 'dimes',     label: 'Dimes',      unitValue: 250   },
+  { key: 'nickels',   label: 'Nickels',    unitValue: 100   },
 ] as const;
 
 export type ChangeOrderDenomKey = (typeof CHANGE_ORDER_DENOMS)[number]['key'];
@@ -94,11 +99,14 @@ export function formatArrivalLabel(iso: string): string {
 }
 
 // Zod: each denom is a non-negative integer count of units.
+// 2026-07-26 change set: fifties + hundreds added to the count shape.
 const denomCounts = z.object({
   ones: z.coerce.number().int().min(0),
   fives: z.coerce.number().int().min(0),
   tens: z.coerce.number().int().min(0),
   twenties: z.coerce.number().int().min(0),
+  fifties: z.coerce.number().int().min(0),
+  hundreds: z.coerce.number().int().min(0),
   quarters: z.coerce.number().int().min(0),
   dimes: z.coerce.number().int().min(0),
   nickels: z.coerce.number().int().min(0),
@@ -148,7 +156,8 @@ export type Step5Values = z.infer<typeof step5Schema>;
 export const step5Defaults: Step5Values = {
   arrivalDate: '',
   units: {
-    ones: 0, fives: 0, tens: 0, twenties: 0, quarters: 0, dimes: 0, nickels: 0,
+    ones: 0, fives: 0, tens: 0, twenties: 0, fifties: 0, hundreds: 0,
+    quarters: 0, dimes: 0, nickels: 0,
   },
   comments: '',
 };
@@ -159,7 +168,7 @@ export function sumChangeOrderUsd(units: Step5Values['units']): {
   coin: number;
   total: number;
 } {
-  const currencyKeys: ChangeOrderDenomKey[] = ['ones', 'fives', 'tens', 'twenties'];
+  const currencyKeys: ChangeOrderDenomKey[] = ['ones', 'fives', 'tens', 'twenties', 'fifties', 'hundreds'];
   const coinKeys: ChangeOrderDenomKey[] = ['quarters', 'dimes', 'nickels'];
   const findUnit = (k: ChangeOrderDenomKey) =>
     CHANGE_ORDER_DENOMS.find((d) => d.key === k)?.unitValue ?? 0;

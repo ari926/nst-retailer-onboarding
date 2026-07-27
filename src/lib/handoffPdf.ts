@@ -118,17 +118,19 @@ interface Step5Payload {
   total?: number;
   // New Cash-Services-aligned shape (2026-07-21+)
   arrivalDate?: string;
-  units?: Partial<Record<'ones'|'fives'|'tens'|'twenties'|'quarters'|'dimes'|'nickels', number>>;
+  units?: Partial<Record<'ones'|'fives'|'tens'|'twenties'|'fifties'|'hundreds'|'quarters'|'dimes'|'nickels', number>>;
   comments?: string;
 }
 
 // Amanda's unit-value table for Step 5 PDF rendering.
+// 2026-07-26 change set: added fifties + hundreds.
 const STEP5_UNIT_VALUE: Record<string, number> = {
-  ones: 100, fives: 500, tens: 1000, twenties: 2000,
+  ones: 100, fives: 500, tens: 1000, twenties: 2000, fifties: 5000, hundreds: 10000,
   quarters: 500, dimes: 250, nickels: 100,
 };
 const STEP5_UNIT_LABEL: Record<string, string> = {
   ones: '$1 bills', fives: '$5 bills', tens: '$10 bills', twenties: '$20 bills',
+  fifties: '$50 bills', hundreds: '$100 bills',
   quarters: 'Quarters', dimes: 'Dimes', nickels: 'Nickels',
 };
 

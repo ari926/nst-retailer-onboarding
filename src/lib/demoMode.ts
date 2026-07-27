@@ -164,7 +164,7 @@ void deliveryDateFiveDaysOut; // kept for reference; new demo uses Wed arrival
 
 const demoStep5: Step5Values = {
   arrivalDate: nextWednesdayIso(),
-  units: { ones: 1, fives: 0, tens: 0, twenties: 0, quarters: 1, dimes: 0, nickels: 0 },
+  units: { ones: 1, fives: 0, tens: 0, twenties: 0, fifties: 0, hundreds: 0, quarters: 1, dimes: 0, nickels: 0 },
   comments: 'Demo change order (1 unit of $1 bills = $100; 1 quarter unit = $500)',
 };
 
