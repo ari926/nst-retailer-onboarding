@@ -981,3 +981,150 @@
 .unit-totals__row--grand strong {
   color: var(--color-primary, #1f8f77);
 }
+
+/* -----------------------------------------------------------------------
+ * 2026-07-26 change set (Amanda + Doug): Step 4 CIT-portal clone.
+ * Adds the left-rail sidenav, right-column Reports box, and a wide
+ * Deposit history table below the Create-new-deposit form.
+ * --------------------------------------------------------------------- */
+.cit-shell {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .cit-shell { grid-template-columns: 1fr; }
+}
+
+.cit-sidenav {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 12px;
+}
+.cit-sidenav__group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cit-sidenav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+}
+.cit-sidenav__item[disabled] {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+.cit-sidenav__item--active {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+}
+.cit-sidenav__hint {
+  font-size: 11px;
+  color: #64748b;
+  padding: 0 4px;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.cit-shell__body { min-width: 0; }
+
+.cit-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .cit-history-row { grid-template-columns: 1fr; }
+}
+
+.cit-history { padding: 12px; }
+.cit-history__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.cit-history__filter {
+  font-size: 12px;
+  color: #475569;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.cit-history__scroll {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+.cit-history__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 900px;
+}
+.cit-history__table th,
+.cit-history__table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  white-space: nowrap;
+}
+.cit-history__table th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+}
+.cit-history__table td.num,
+.cit-history__table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.cit-history__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.cit-reports {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+.cit-reports__head {
+  font-weight: 600;
+  color: #334155;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 6px;
+}
+.cit-reports__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cit-reports__list a {
+  color: #0369a1;
+  font-size: 13px;
+  text-decoration: none;
+}
+.cit-reports__list a:hover { text-decoration: underline; }

@@ -4,7 +4,7 @@ import { FormProvider, useForm, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { ChevronDown, ChevronUp, Building2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Building2, FileText, History, ClipboardList } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
@@ -16,6 +16,9 @@ import {
   COIN_DENOMS,
   SHIFT_OPTIONS,
   computeExpectedCreditDate,
+  deriveServiceWeekday,
+  nextDatesForWeekday,
+  WEEKDAY_LABEL,
   type Step4Values,
   type BillKey,
   type CoinKey,
@@ -28,14 +31,15 @@ import {
  * retailers train on the same interface they'll use going live. NST-styled
  * portal shell, CIT information architecture.
  *
- * Layout:
- *   Simulation banner ("Simulating login as: [customer]")
- *   Left: Store Information (read-only summary)
- *   Right column:
- *     Deposit ticket card (bag, prepared by, business date, verified by,
- *       register id, departure date, shift, expected credit date)
- *     Amount entry card (total currency + coin + optional breakdowns)
- *     Comments
+ * 2026-07-26 change set (Amanda + Doug):
+ *   Pixel-cloned closer to the real CIT portal:
+ *     - Left rail nav (Bank deposits / Deposit history / Reports)
+ *     - Store info panel + Create-new-deposit form in top row
+ *     - Right sidebar with a Reports panel (Deposit list, Deposit activity)
+ *     - Deposit history table below the form (sample rows for training)
+ *     - Reset + Complete deposit buttons (replaces "Confirm & continue")
+ *     - Departure date restricted to future dates on the store's service
+ *       day-of-week (Wed store → future Wednesdays only, etc.)
  */
 
 interface StoreInfo {
@@ -360,6 +364,19 @@ export default function Step4Deposit() {
 
   const expectedCreditDate = useMemo(() => computeExpectedCreditDate(businessDate), [businessDate]);
 
+  // 2026-07-26 (Amanda + Doug): departure date restricted to store service day.
+  const [serviceWeekday, setServiceWeekday] = useState<number>(3); // default Wed
+  useEffect(() => {
+    (async () => {
+      const s7 = await loadDraft<{ preferredDate?: string; serviceDay?: string }>(7);
+      setServiceWeekday(deriveServiceWeekday(s7 ?? undefined));
+    })();
+  }, []);
+  const departureOptions = useMemo(
+    () => nextDatesForWeekday(serviceWeekday, 12),
+    [serviceWeekday],
+  );
+
   const onSubmit = async (values: Step4Values) => {
     setSubmitting(true);
     try {
@@ -392,9 +409,49 @@ export default function Step4Deposit() {
           subtitleKey="step_4_deposit.subtitle"
           submitting={submitting}
           submitLabelKey="step_4_deposit.submit"
+          hideSubmit
+          footerActions={
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => reset(step4Defaults)}
+                disabled={submitting}
+              >
+                Reset
+              </button>
+              <button
+                type="submit"
+                form="step-form"
+                className="btn btn-primary"
+                disabled={submitting}
+              >
+                {submitting ? <span className="spinner" aria-hidden /> : 'Complete deposit'}
+              </button>
+            </>
+          }
         >
           <SimulationBanner customer={storeInfo.customer} />
 
+          {/* 2026-07-26 (Amanda + Doug): CIT-style 3-column shell.
+              Left rail = section nav; center = form + history; right = Reports. */}
+          <div className="cit-shell">
+            <nav className="cit-sidenav" aria-label="CIT sections">
+              <div className="cit-sidenav__group">
+                <button type="button" className="cit-sidenav__item cit-sidenav__item--active">
+                  <FileText size={14} /> Bank deposits
+                </button>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <History size={14} /> Deposit history
+                </button>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ClipboardList size={14} /> Reports
+                </button>
+              </div>
+              <p className="cit-sidenav__hint">Training view — only Bank deposits is active during onboarding.</p>
+            </nav>
+
+            <div className="cit-shell__body stack stack-md">
           <div className="cit-layout">
             <StoreInfoPanel info={storeInfo} />
 
@@ -441,7 +498,23 @@ export default function Step4Deposit() {
                   </div>
                   <div className="field">
                     <label htmlFor="departureDate" className="field-label">Departure date</label>
-                    <input id="departureDate" className="input" type="date" {...register('departureDate')} />
+                    {/* 2026-07-26 (Amanda + Doug): only allow future dates on the
+                        store's service day-of-week. `departureOptions` is derived
+                        from Step 7's preferredDate (Monday-of-week anchor). */}
+                    <select id="departureDate" className="input" {...register('departureDate')}>
+                      <option value="">— Select {WEEKDAY_LABEL[serviceWeekday]} —</option>
+                      {departureOptions.map((iso) => {
+                        const [y, m, d] = iso.split('-').map(Number);
+                        const dt = new Date(y, m - 1, d);
+                        const label = dt.toLocaleDateString(undefined, {
+                          weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+                        });
+                        return <option key={iso} value={iso}>{label}</option>;
+                      })}
+                    </select>
+                    <span className="field-hint">
+                      This store is scheduled for {WEEKDAY_LABEL[serviceWeekday]} service. Departure must fall on a {WEEKDAY_LABEL[serviceWeekday]}.
+                    </span>
                   </div>
                 </div>
 
@@ -507,6 +580,115 @@ export default function Step4Deposit() {
                   <textarea id="comments" className="textarea" rows={2} {...register('comments')} />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* 2026-07-26 (Amanda + Doug): Deposit history + Reports rail.
+              Read-only training data — mirrors the CIT screen exactly. */}
+          <div className="cit-history-row">
+            <section className="step-card cit-history" aria-label="Deposit history">
+              <header className="cit-history__head">
+                <h3 className="section-heading">Deposit history</h3>
+                <label className="cit-history__filter">
+                  <input type="checkbox" disabled /> Show cancelled deposits
+                </label>
+              </header>
+              <div className="cit-history__scroll">
+                <table className="cit-history__table">
+                  <thead>
+                    <tr>
+                      <th>Date/time</th>
+                      <th>Bag number</th>
+                      <th>Created by</th>
+                      <th>Business date</th>
+                      <th>Deposit date</th>
+                      <th>Deposit method</th>
+                      <th className="num">Currency</th>
+                      <th className="num">Coin</th>
+                      <th className="num">Total</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>2026-07-13 04:06 PM EDT</td>
+                      <td className="mono">LAK0104</td>
+                      <td>cash@talaria.com</td>
+                      <td>2026-07-14</td>
+                      <td>—</td>
+                      <td>Carrier pickup</td>
+                      <td className="num">1,200.00</td>
+                      <td className="num">—</td>
+                      <td className="num">1,200.00</td>
+                      <td>Pending departure</td>
+                    </tr>
+                    <tr>
+                      <td>2026-07-10 03:21 PM EDT</td>
+                      <td className="mono">TH36756</td>
+                      <td>cash@talaria.com</td>
+                      <td>2026-07-07</td>
+                      <td>—</td>
+                      <td>Carrier pickup</td>
+                      <td className="num">1,500.00</td>
+                      <td className="num">100.00</td>
+                      <td className="num">1,600.40</td>
+                      <td>Pending departure</td>
+                    </tr>
+                    <tr>
+                      <td>2026-06-26 02:05 PM EDT</td>
+                      <td className="mono">EDT714546</td>
+                      <td>cash@talaria.com</td>
+                      <td>2026-06-30</td>
+                      <td>—</td>
+                      <td>Carrier pickup</td>
+                      <td className="num">2,900.00</td>
+                      <td className="num">8.75</td>
+                      <td className="num">2,908.75</td>
+                      <td>Pending departure</td>
+                    </tr>
+                    <tr>
+                      <td>2026-06-19 11:00 AM EDT</td>
+                      <td className="mono">GF2266</td>
+                      <td>cash@talaria.com</td>
+                      <td>2026-06-16</td>
+                      <td>—</td>
+                      <td>Carrier pickup</td>
+                      <td className="num">10,800.00</td>
+                      <td className="num">—</td>
+                      <td className="num">10,800.00</td>
+                      <td>Pending departure</td>
+                    </tr>
+                    <tr>
+                      <td>2026-06-14 12:32 PM EDT</td>
+                      <td className="mono">FA132466</td>
+                      <td>cash@talaria.com</td>
+                      <td>2026-06-14</td>
+                      <td>—</td>
+                      <td>Carrier pickup</td>
+                      <td className="num">5,340.00</td>
+                      <td className="num">—</td>
+                      <td className="num">5,340.00</td>
+                      <td>Pending departure</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="cit-history__actions">
+                <button type="button" className="btn-ghost btn-ghost--sm" disabled>+ Create deposit</button>
+                <button type="button" className="btn-ghost btn-ghost--sm" disabled>× Cancel selected deposit</button>
+                <button type="button" className="btn-ghost btn-ghost--sm" disabled>🗄 Reprint selected deposit</button>
+                <button type="button" className="btn-ghost btn-ghost--sm" disabled>🔍 View selected deposit</button>
+              </div>
+            </section>
+
+            <aside className="cit-reports" aria-label="Reports">
+              <header className="cit-reports__head">Reports</header>
+              <ul className="cit-reports__list">
+                <li><a href="#" onClick={(e) => e.preventDefault()}>Deposit list</a></li>
+                <li><a href="#" onClick={(e) => e.preventDefault()}>Deposit activity</a></li>
+              </ul>
+            </aside>
+          </div>
             </div>
           </div>
         </StepShell>

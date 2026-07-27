@@ -171,6 +171,68 @@ export const step4Defaults: Step4Values = {
 };
 
 /**
+ * 2026-07-26 change set (Amanda + Doug):
+ *   The departure-date picker must restrict to future dates that match the
+ *   store's actual pickup day-of-week (a Wednesday store sees only future
+ *   Wednesdays, etc.). These helpers make that filtering deterministic and
+ *   testable.
+ */
+
+export const SERVICE_DAY_WEEKDAY: Record<string, number> = {
+  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
+};
+
+export const WEEKDAY_LABEL: Record<number, string> = {
+  0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday',
+  4: 'Thursday', 5: 'Friday', 6: 'Saturday',
+};
+
+/**
+ * Derive the store's expected pickup weekday from Step 7 draft. Priority:
+ *   1. explicit ISO date in Step 7 `preferredDate` (Monday-of-week anchor)
+ *   2. `serviceDay` code if present in draft (legacy)
+ *   3. fallback: Wednesday (matches the walkthrough banner copy)
+ */
+export function deriveServiceWeekday(step7?: {
+  preferredDate?: string;
+  serviceDay?: string;
+}): number {
+  if (step7?.preferredDate) {
+    const [y, m, d] = step7.preferredDate.split('-').map(Number);
+    if (y && m && d) {
+      const dt = new Date(y, m - 1, d);
+      if (Number.isFinite(dt.getTime())) return dt.getDay();
+    }
+  }
+  if (step7?.serviceDay && step7.serviceDay in SERVICE_DAY_WEEKDAY) {
+    return SERVICE_DAY_WEEKDAY[step7.serviceDay];
+  }
+  return 3; // Wednesday
+}
+
+/**
+ * Generate `count` future dates whose weekday matches `weekday` (0=Sun..6=Sat),
+ * starting from the day AFTER `from`. Used to populate the CIT-style departure
+ * date picker so retailers can only pick their actual service day.
+ */
+export function nextDatesForWeekday(
+  weekday: number,
+  count = 12,
+  from: Date = new Date(),
+): string[] {
+  const out: string[] = [];
+  const cursor = new Date(from);
+  cursor.setHours(0, 0, 0, 0);
+  cursor.setDate(cursor.getDate() + 1);
+  while (cursor.getDay() !== weekday) cursor.setDate(cursor.getDate() + 1);
+  while (out.length < count) {
+    out.push(cursor.toISOString().slice(0, 10));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return out;
+}
+
+/**
  * Expected credit date is calculated as the next business day (Mon–Fri) after
  * `businessDate`. Purely for display; not persisted.
  */

@@ -20,6 +20,8 @@ export function StepShell({
   onBack,
   submitting = false,
   submitLabelKey = 'global.buttons.save_and_continue',
+  hideSubmit = false,
+  footerActions,
 }: {
   stepId: StepId;
   titleKey: string;
@@ -28,6 +30,11 @@ export function StepShell({
   onBack?: () => void;
   submitting?: boolean;
   submitLabelKey?: string;
+  // 2026-07-26 (Amanda + Doug): Step 4 needs custom Reset / Complete deposit
+  // buttons instead of the standard "Save & continue". Steps can opt out of
+  // the built-in submit and inject their own footer buttons.
+  hideSubmit?: boolean;
+  footerActions?: ReactNode;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -58,9 +65,12 @@ export function StepShell({
           </button>
         </div>
         <div className="step-footer__actions">
-          <button type="submit" form="step-form" className="btn btn-primary" disabled={submitting}>
-            {submitting ? <span className="spinner" aria-hidden /> : t(submitLabelKey)}
-          </button>
+          {footerActions}
+          {!hideSubmit && (
+            <button type="submit" form="step-form" className="btn btn-primary" disabled={submitting}>
+              {submitting ? <span className="spinner" aria-hidden /> : t(submitLabelKey)}
+            </button>
+          )}
         </div>
       </div>
     </section>
