@@ -479,7 +479,7 @@ export function renderHandoffPdf(
       ['Make / model', [s2.safeMake, s2.safeModel].filter(Boolean).join(' ') || '—'],
     ];
     const rightRows: Array<[string, string]> = [
-      ['Serial', s2.safeSerial ?? '—'],
+      // 2026-07-26 (Amanda + Doug): Serial removed — customers rarely have it.
       ['Location', s2.safeLocation ?? '—'],
     ];
     const yLeft = drawKvCol(doc, leftRows, MARGIN_X, COL_W, y, 70);

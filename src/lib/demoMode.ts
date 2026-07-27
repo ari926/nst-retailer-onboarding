@@ -110,8 +110,8 @@ const demoStep2: Step2Values = {
   hasSmartSafe: 'no',
   safeMake: '',
   safeModel: '',
-  safeSerial: '',
-  dashboardConnection: undefined,
+  // safeSerial removed 2026-07-26 (Amanda + Doug change set)
+  dashboardConnection: '',
   storageMethod: 'under_counter',
   storageMethodOther: '',
   keyHolders: [

@@ -66,14 +66,18 @@ type EditKey =
 // Keep in sync with the ReviewCard `id` prop below (`card-<key>`).
 const CARD_LABEL: Record<EditKey, string> = {
   // Card labels here are what appears in validation toasts. Keep aligned to
-  // the on-screen card titles below (line 818 for the "business card" and
-  // the BusinessCard render).
+  // the on-screen card titles below.
+  //
+  // 2026-07-26 change set (Amanda + Doug):
+  //   - "Business card" (formerly "Primary Contact") is now "Primary Onboarding Contact"
+  //   - "Back-of-house manager" is now "Primary Site Contact"
+  //   - Additional Contacts is now the last card in the review grid
   business: 'Business & Owner',
   address: 'Address',
   hours: 'Operating hours',
-  primary: 'Business card',
+  primary: 'Primary Onboarding Contact',
   additional: 'Additional contacts',
-  manager: 'Back-of-house manager',
+  manager: 'Primary Site Contact',
 };
 
 // Map top-level RHF/Zod field paths to the card that owns them, so a failed
@@ -338,13 +342,20 @@ export default function Step1Profile() {
               </div>
             )}
 
+            {/* 2026-07-26 card order (Amanda + Doug change set):
+                1. Business & Owner (top-of-store info + owner)
+                2. Address
+                3. Operating days & hours (span-2)
+                4. Primary Onboarding Contact  ─┐  side-by-side row
+                5. Primary Site Contact        ─┘
+                6. Additional Contacts (span-2, last) */}
             <div className="review-grid">
               <BusinessCard editing={editing.business} setEditing={(v) => toggleEdit('business', v)} onFile={provenance.business} invalid={invalidCards.has('business')} />
               <AddressCard editing={editing.address} setEditing={(v) => toggleEdit('address', v)} onFile={provenance.address} invalid={invalidCards.has('address')} />
               <HoursCard editing={editing.hours} setEditing={(v) => toggleEdit('hours', v)} invalid={invalidCards.has('hours')} />
               <PrimaryContactCard editing={editing.primary} setEditing={(v) => toggleEdit('primary', v)} onFile={provenance.primary} invalid={invalidCards.has('primary')} />
-              <AdditionalContactsCard editing={editing.additional} setEditing={(v) => toggleEdit('additional', v)} invalid={invalidCards.has('additional')} />
               <ManagerCard editing={editing.manager} setEditing={(v) => toggleEdit('manager', v)} invalid={invalidCards.has('manager')} />
+              <AdditionalContactsCard editing={editing.additional} setEditing={(v) => toggleEdit('additional', v)} invalid={invalidCards.has('additional')} />
             </div>
           </div>
         </StepShell>
@@ -818,7 +829,7 @@ function PrimaryContactCard(props: { editing: boolean; setEditing: (v: boolean) 
     <ReviewCard
       id="card-primary"
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>}
-      title="Business Card"
+      title="Primary Onboarding Contact"
       badge={sameAsOwner ? 'Same as owner' : (props.onFile ? 'On file' : 'Add details')}
       badgeVariant={sameAsOwner ? 'on-file' : (props.onFile ? 'on-file' : 'optional')}
       editing={props.editing}
@@ -830,7 +841,7 @@ function PrimaryContactCard(props: { editing: boolean; setEditing: (v: boolean) 
             <div className="avatar">{initials}</div>
             <div>
               <div className="person__name">{name || <span className="muted">—</span>}</div>
-              <div className="person__role">Business card</div>
+              <div className="person__role">Primary Onboarding Contact</div>
             </div>
           </div>
           <div className="contact-lines">
@@ -1014,7 +1025,7 @@ function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void
     <ReviewCard
       id="card-manager"
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 11h-6M19 8v6" /></svg>}
-      title="Back-of-house manager"
+      title="Primary Site Contact"
       badge="Optional"
       badgeVariant="optional"
       editLabel={hasAny ? 'Edit' : 'Add'}
@@ -1028,7 +1039,7 @@ function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void
               <div className="avatar">{initials}</div>
               <div>
                 <div className="person__name">{name}</div>
-                <div className="person__role">BOH manager</div>
+                <div className="person__role">Primary Site Contact</div>
               </div>
             </div>
             <div className="contact-lines">
@@ -1048,9 +1059,9 @@ function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void
           </>
         ) : (
           <div className="empty-state">
-            No back-of-house manager on file.{' '}
-            <strong>You can skip this and add it later</strong> — but listing the person who handles deposits
-            day-to-day helps us reach the right contact for cash issues.
+            No primary site contact on file.{' '}
+            <strong>You can skip this and add it later</strong> — but listing the person on-site who handles
+            deposits day-to-day helps us reach the right contact for cash issues.
           </div>
         )
       }
@@ -1062,7 +1073,7 @@ function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void
           </div>
           <div className="field full">
             <label className="field-label">Email</label>
-            <input type="email" {...register('bohManager.email')} placeholder="manager@example.com" />
+            <input type="email" {...register('bohManager.email')} placeholder="site.contact@example.com" />
             {errors.bohManager?.email && <span className="field-error">{errors.bohManager.email.message as string}</span>}
           </div>
           <div className="field full">

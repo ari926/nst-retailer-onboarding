@@ -427,7 +427,7 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
           .join(' · ') || '—',
       ],
       [
-        'Business card contact',
+        'Primary Onboarding Contact',
         primarySameAsOwner
           ? 'Same as owner'
           : ([primary.name, primary.phone, primary.email]
@@ -457,7 +457,7 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
     const boh = s1.bohManager ?? s1.managerContact;
     if (boh && (boh.name || boh.email || boh.phone)) {
       rows.push([
-        'BOH manager',
+        'Primary Site Contact',
         [boh.name, boh.phone, boh.email].filter(Boolean).join(' · ') || '—',
       ]);
     }
@@ -662,7 +662,9 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
         ['When to begin service', timingLabel],
       ];
       if (s7.preferredDate) {
-        rows.push(['First pickup (Monday)', formatDate(s7.preferredDate)]);
+        // 2026-07-26 change set (Amanda + Doug): the ISO date is the Monday
+        // anchor of the week; routing picks the actual day-of-week later.
+        rows.push(['Preferred week of start', `Week of ${formatDate(s7.preferredDate)}`]);
       }
       if (cadenceLabel) {
         rows.push(['Check-back cadence', cadenceLabel]);

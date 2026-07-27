@@ -35,12 +35,14 @@ export const SERVICE_DAYS = [
 
 export type ServiceDay = (typeof SERVICE_DAYS)[number];
 
+// 2026-07-26 change set (Amanda + Doug): added `monthly` as a supported frequency.
 export const FREQUENCIES = [
   'weekly',
   'twice_weekly',
   'thrice_weekly',
   'daily',
   'biweekly',
+  'monthly',
 ] as const;
 export type Frequency = (typeof FREQUENCIES)[number];
 
@@ -220,7 +222,8 @@ export const step7Schema = z
         ctx.addIssue({
           code: 'custom',
           path: ['preferredDate'],
-          message: 'Pick a Monday to begin service',
+          // 2026-07-26 change set: framed as "week of start" (Monday anchor).
+          message: 'Pick a week to begin service',
         });
         return;
       }
@@ -228,7 +231,7 @@ export const step7Schema = z
         ctx.addIssue({
           code: 'custom',
           path: ['preferredDate'],
-          message: 'Please pick a Monday',
+          message: 'Please pick a valid week from the list',
         });
       }
       const earliest = earliestPickupDate();
@@ -247,7 +250,7 @@ export const step7Schema = z
         ctx.addIssue({
           code: 'custom',
           path: ['preferredDate'],
-          message: `That date is outside the "${timing}" window. Please pick a Monday on or before ${toIsoDate(latest)}.`,
+          message: `That week is outside the "${timing}" window. Please pick a week starting on or before ${toIsoDate(latest)}.`,
         });
       }
     } else if (isFarOut) {

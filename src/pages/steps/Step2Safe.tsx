@@ -13,7 +13,6 @@ import {
   step2Schema,
   step2Defaults,
   STORAGE_METHODS,
-  DASHBOARD_OPTIONS,
   PROVISIONAL_OPTIONS,
   type Step2Values,
 } from './Step2Safe.schema';
@@ -22,7 +21,7 @@ import {
  * Step 2 — Safe & keys.
  *
  * Branches on "Do you have a Smart Safe?":
- *   - yes -> make/model/serial + dashboard connection
+ *   - yes -> make/model + dashboard-connection description (free text)
  *   - no  -> storage method (with "other" freeform)
  *
  * Always collects at least one key holder and a provisional credit choice.
@@ -160,28 +159,21 @@ export default function Step2Safe() {
                   </div>
                 </div>
 
+                {/* 2026-07-26 change set (Amanda + Doug):
+                    - Serial-number question removed — customers rarely have it on hand
+                    - Dashboard-connection changed from radio (direct/carrier/unsure)
+                      to open-ended free text per Amanda's exact wording. */}
                 <div className="field">
-                  <label htmlFor="safeSerial" className="field-label field-required">
-                    {t('step_2_safe.fields.safe_serial')}
+                  <label htmlFor="dashboardConnection" className="field-label field-required">
+                    How will your safe connect to the dashboard, and does it require internet access?
                   </label>
-                  <input id="safeSerial" className="input" {...register('safeSerial')} />
-                  {errors.safeSerial && (
-                    <span className="field-error">{errors.safeSerial.message as string}</span>
-                  )}
-                </div>
-
-                <div className="field">
-                  <label className="field-label field-required">
-                    {t('step_2_safe.fields.dashboard_question')}
-                  </label>
-                  <div className="radio-col">
-                    {DASHBOARD_OPTIONS.map((opt) => (
-                      <label key={opt} className="radio-option">
-                        <input type="radio" value={opt} {...register('dashboardConnection')} />
-                        <span>{t(`step_2_safe.fields.dashboard_options.${opt}`)}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <textarea
+                    id="dashboardConnection"
+                    className="input"
+                    rows={3}
+                    placeholder="e.g. Ethernet from the safe to our router; yes it needs internet"
+                    {...register('dashboardConnection')}
+                  />
                   {errors.dashboardConnection && (
                     <span className="field-error">
                       {errors.dashboardConnection.message as string}

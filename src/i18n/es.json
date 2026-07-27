@@ -284,7 +284,8 @@
       "twice_weekly": "Dos veces por semana",
       "thrice_weekly": "Tres veces por semana",
       "daily": "Diario (Lun–Vie)",
-      "biweekly": "Cada dos semanas"
+      "biweekly": "Cada dos semanas",
+      "monthly": "Mensual"
     },
     "fields": {
       "select_placeholder": "— Selecciona —",

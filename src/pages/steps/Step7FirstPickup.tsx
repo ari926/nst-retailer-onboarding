@@ -313,10 +313,17 @@ export default function Step7FirstPickup() {
           )}
 
           {/*
-           * Near-term timings (ASAP / 0–3 / 3–6) — Monday-only date picker.
-           * We render a <select> of pre-generated Mondays inside the timing
-           * window rather than a raw <input type="date">, so the user can't
-           * pick a non-Monday.
+           * Near-term timings (ASAP / 0–3 / 3–6) — pick the WEEK to start.
+           *
+           * 2026-07-26 change set (Amanda + Doug):
+           *   The old copy said "Preferred start date (Mondays only)" and
+           *   promised routing on Mondays. Doug pushed back — routing picks
+           *   the actual day-of-week per store, not the customer. So we now:
+           *     - Relabel the field "Preferred week of start"
+           *     - Present the same list of Mondays (each Monday is the
+           *       anchor of a calendar week) but describe them as weeks
+           *     - Rewrite the hint so routing owns the day-of-week decision
+           *   Internal storage stays as an ISO Monday date for compat.
            */}
           {!deferred && isNearTerm && (
             <div className="field">
@@ -325,8 +332,8 @@ export default function Step7FirstPickup() {
                 className="field-label field-required"
               >
                 {t(
-                  'step_7_launch.fields.preferred_monday',
-                  'Preferred start date (Mondays only)',
+                  'step_7_launch.fields.preferred_week',
+                  'Preferred week of start',
                 )}
               </label>
               <select
@@ -340,7 +347,9 @@ export default function Step7FirstPickup() {
                 {mondayOptions.map((iso) => {
                   const [y, m, d] = iso.split('-').map(Number);
                   const dt = new Date(y, m - 1, d);
-                  const label = dt.toLocaleDateString(undefined, {
+                  // Show as "Week of Mon, Aug 3, 2026" — the Monday is the
+                  // anchor of the calendar week, not the guaranteed pickup day.
+                  const anchor = dt.toLocaleDateString(undefined, {
                     weekday: 'short',
                     month: 'short',
                     day: 'numeric',
@@ -348,15 +357,15 @@ export default function Step7FirstPickup() {
                   });
                   return (
                     <option key={iso} value={iso}>
-                      {label}
+                      {t('step_7_launch.fields.week_of_prefix', 'Week of')} {anchor}
                     </option>
                   );
                 })}
               </select>
               <p className="field-hint">
                 {t(
-                  'step_7_launch.fields.monday_hint',
-                  'We route new stops on Mondays. Earliest available Monday is {earliestDate}.',
+                  'step_7_launch.fields.week_hint',
+                  'Our routing / onboarding team will be in touch to let you know the day of the week your service will begin. Earliest available week starts {earliestDate}.',
                   { earliestDate: earliestStr },
                 )}
               </p>
