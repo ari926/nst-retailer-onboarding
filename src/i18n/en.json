@@ -177,7 +177,8 @@
 
   "step_3_banking": {
     "title": "Confirm your banking details.",
-    "subtitle": "We pulled these from the cash info form you signed. Review them before we connect everything.",
+    "subtitle": "Enter the details from the cash info form you signed. We use these to route your deposits.",
+    "manual_intro": "Grab your signed cash info form and copy the details below. Everything is encrypted before we store it.",
     "fields": {
       "bank_name": "Bank name",
       "account_last4": "Last 4 of account number",

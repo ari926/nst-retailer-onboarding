@@ -4,12 +4,11 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { loadDraft, saveDraft, submitStep } from '../../lib/stepService';
-import { fetchBankingOcr } from '../../lib/ocrService';
 import {
   step3Schema,
   step3Defaults,
@@ -19,21 +18,21 @@ import {
 /**
  * Step 3 — Banking confirmation.
  *
- * On mount: calls OCR service to pull values from the signed cash info form.
- *   - On success: populates form in "review" mode (fields disabled, "these
- *     match" checkbox + "flag for NST to update" button).
- *   - On failure: shows manual-entry mode with editable fields and a banner.
+ * 2026-07-26 (Amanda's change set): OCR path removed. There is no upstream
+ * pipeline delivering the signed cash info form to us today (no S3 bucket, no
+ * SF Files integration, no Textract function). Every retailer was seeing the
+ * red "We couldn't read your form automatically" banner because the client
+ * was invoking a Supabase Edge Function (`ocr-banking`) that was never
+ * deployed. Per Ari, we ship a clean manual-entry mode now; when the OCR
+ * pipeline is built later we'll flip back to auto-fill.
  */
 export default function Step3Banking() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const sfdcAccountId = useOnboardingStore((s) => s.sfdcAccountId);
   const markStepCompleted = useOnboardingStore((s) => s.markStepCompleted);
   const setCurrentStep = useOnboardingStore((s) => s.setCurrentStep);
 
   const [submitting, setSubmitting] = useState(false);
-  const [ocrLoading, setOcrLoading] = useState(true);
-  const [ocrFailed, setOcrFailed] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
 
   const methods = useForm<Step3Values>({
@@ -52,10 +51,9 @@ export default function Step3Banking() {
     formState: { errors },
   } = methods;
 
-  const source = watch('source');
-  const matches = watch('matches');
-
-  // On mount: try to load draft first; if none, run OCR
+  // On mount: load any saved draft. Always start in manual-entry mode
+  // (source='manual', matches=true). See file-header comment for why the OCR
+  // path is disabled.
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -63,37 +61,17 @@ export default function Step3Banking() {
       if (!mounted) return;
 
       if (draft && draft.bankName) {
-        // Draft exists — skip OCR, use stored values
-        reset(draft);
-        setOcrLoading(false);
-        setOcrFailed(draft.source === 'manual');
-      } else if (sfdcAccountId) {
-        const result = await fetchBankingOcr(sfdcAccountId);
-        if (!mounted) return;
-        if (result.success) {
-          reset({
-            source: 'ocr',
-            bankName: result.bankName,
-            accountLast4: result.accountLast4,
-            routingNumber: result.routingNumber,
-            signerName: result.signerName,
-            matches: true,
-            mismatchNotes: '',
-          });
-        } else {
-          setOcrFailed(true);
-          setValue('source', 'manual');
-        }
-        setOcrLoading(false);
+        // Force source=manual on legacy drafts so review-mode read-only
+        // inputs don't lock out edits.
+        reset({ ...draft, source: 'manual', matches: true });
       } else {
-        setOcrFailed(true);
         setValue('source', 'manual');
-        setOcrLoading(false);
+        setValue('matches', true);
       }
       setDraftLoaded(true);
     })();
     return () => { mounted = false; };
-  }, [reset, setValue, sfdcAccountId]);
+  }, [reset, setValue]);
 
   // Autosave
   useEffect(() => {
@@ -127,7 +105,8 @@ export default function Step3Banking() {
     }
   };
 
-  const reviewMode = source === 'ocr' && !ocrFailed;
+  // Manual entry only — no review/read-only mode until the OCR pipeline exists.
+  const reviewMode = false;
 
   return (
     <FormProvider {...methods}>
@@ -146,21 +125,12 @@ export default function Step3Banking() {
           submitting={submitting}
         >
           <div className="step-card stack stack-md">
-            {ocrLoading ? (
-              <div className="ocr-loading">
-                <Loader2 className="spinner" aria-hidden />
-                <p>Reading your signed form...</p>
-              </div>
-            ) : (
-              <>
-                {ocrFailed && (
-                  <div className="banner banner--warn">
-                    <AlertCircle size={18} aria-hidden />
-                    <span>{t('step_3_banking.ocr_fail_banner')}</span>
-                  </div>
-                )}
+            <div className="banner banner--info">
+              <Info size={18} aria-hidden />
+              <span>{t('step_3_banking.manual_intro')}</span>
+            </div>
 
-                <div className="grid-2">
+            <div className="grid-2">
                   <div className="field">
                     <label htmlFor="bankName" className="field-label field-required">
                       {t('step_3_banking.fields.bank_name')}
@@ -239,38 +209,6 @@ export default function Step3Banking() {
                   </div>
                 </div>
 
-                {reviewMode && (
-                  <>
-                    <hr className="divider" />
-                    <label className="checkbox-row">
-                      <input type="checkbox" {...register('matches')} />
-                      <span>{t('step_3_banking.fields.match_checkbox')}</span>
-                    </label>
-                    {!matches && (
-                      <div className="field">
-                        <label
-                          htmlFor="mismatchNotes"
-                          className="field-label field-required"
-                        >
-                          {t('step_3_banking.fields.mismatch_notes')}
-                        </label>
-                        <textarea
-                          id="mismatchNotes"
-                          className="textarea"
-                          rows={3}
-                          {...register('mismatchNotes')}
-                        />
-                        {errors.mismatchNotes && (
-                          <span className="field-error">
-                            {errors.mismatchNotes.message}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </>
-            )}
           </div>
         </StepShell>
       </form>

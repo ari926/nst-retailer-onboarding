@@ -177,7 +177,8 @@
 
   "step_3_banking": {
     "title": "Confirma los datos bancarios.",
-    "subtitle": "Extrajimos esta información automáticamente del formulario de información de efectivo que firmaste. Revísala antes de que conectemos todo.",
+    "subtitle": "Ingresa los datos del formulario de información de efectivo que firmaste. Los usamos para dirigir tus depósitos.",
+    "manual_intro": "Toma tu formulario de información de efectivo firmado y copia los datos a continuación. Todo se cifra antes de guardarse.",
     "fields": {
       "bank_name": "Nombre del banco",
       "account_last4": "Últimos 4 dígitos de la cuenta",
