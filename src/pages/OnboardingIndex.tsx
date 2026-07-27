@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { STEPS } from '../types/onboarding';
 import { generateHandoffPdf } from '../lib/handoffPdf';
+import { loadAllSubmissions } from '../lib/stepService';
 import { getSyncStatus, type SfSyncSummary } from '../lib/salesforceService';
 
 /**
@@ -95,12 +96,18 @@ export default function OnboardingIndex() {
     };
   }, [allDone, sfdcAccountId, sync?.allSynced, sync?.hasFailures]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     setDownloading(true);
     try {
+      // Preload the real submitted payloads from the server BEFORE calling
+      // the (synchronous) jsPDF generator. Previously the generator read
+      // from an orphaned localStorage key that nothing wrote, which caused
+      // every section of the PDF to display "Status: Not submitted".
+      const submissions = await loadAllSubmissions();
       const filename = generateHandoffPdf({
         storefrontName: storefrontName ?? 'Store',
         sfdcAccountId,
+        submissions,
       });
       toast.success(
         t('onboarding.handoff.downloaded', 'Downloaded {filename}', {

@@ -5,11 +5,15 @@ import { z } from 'zod';
  *
  * Branching logic:
  *   - hasSmartSafe === 'yes'  -> safe make/model/serial + dashboard connection required
+ *                             -> provisional credit choice required
  *   - hasSmartSafe === 'no'   -> storageMethod required instead
+ *                             -> provisional credit is HIDDEN (only applies to SmartSafe)
  *
  * Always required:
- *   - at least one key holder (name + location)
- *   - provisional credit choice
+ *   - at least one key holder (name; role is optional)
+ *
+ * NOTE: per Amanda 2026-07-21, we no longer ask WHERE keys are kept
+ * (customers push back on disclosing key location). We keep name + role only.
  */
 
 export const STORAGE_METHODS = ['under_counter', 'drop_safe', 'vault', 'other'] as const;
@@ -19,7 +23,6 @@ export const PROVISIONAL_OPTIONS = ['already_set', 'want_to_set', 'no'] as const
 const keyHolderSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   role: z.string().optional(),
-  location: z.string().min(1, 'Tell us where the key is kept'),
 });
 
 export const step2Schema = z
@@ -40,7 +43,8 @@ export const step2Schema = z
     keyHolders: z
       .array(keyHolderSchema)
       .min(1, 'Add at least one key holder'),
-    provisionalCredit: z.enum(PROVISIONAL_OPTIONS, { message: 'Pick one' }),
+    // Only required when hasSmartSafe === 'yes' (see superRefine below).
+    provisionalCredit: z.enum(PROVISIONAL_OPTIONS).optional(),
   })
   .superRefine((v, ctx) => {
     if (v.hasSmartSafe === 'yes') {
@@ -55,6 +59,9 @@ export const step2Schema = z
       }
       if (!v.dashboardConnection) {
         ctx.addIssue({ code: 'custom', path: ['dashboardConnection'], message: 'Required' });
+      }
+      if (!v.provisionalCredit) {
+        ctx.addIssue({ code: 'custom', path: ['provisionalCredit'], message: 'Pick one' });
       }
     } else if (v.hasSmartSafe === 'no') {
       if (!v.storageMethod) {
@@ -80,6 +87,6 @@ export const step2Defaults: Step2Values = {
   dashboardConnection: undefined,
   storageMethod: undefined,
   storageMethodOther: '',
-  keyHolders: [{ name: '', role: '', location: '' }],
-  provisionalCredit: 'no',
+  keyHolders: [{ name: '', role: '' }],
+  provisionalCredit: undefined,
 };

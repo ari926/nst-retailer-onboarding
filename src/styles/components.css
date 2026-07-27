@@ -677,3 +677,307 @@
   color: #1e40af;
   font-style: italic;
 }
+
+/* ============================================================
+   Step 4 (CIT Bank Deposits) + Step 5 (Cash Services Change Order)
+   NST-styled portal shell + Cash Services / CIT info architecture.
+   Added 2026-07-21 per Amanda's work list.
+   ============================================================ */
+
+/* Simulation banner — makes it obvious this is a training run */
+.sim-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f59e0b 10%, white);
+  border: 1px solid color-mix(in srgb, #f59e0b 40%, transparent);
+  color: #78350f;
+  margin-bottom: var(--space-4, 1rem);
+}
+.sim-banner__body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sim-banner__badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #d97706;
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.sim-banner__text {
+  font-size: 0.9375rem;
+}
+.sim-banner__hint {
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, #78350f 80%, transparent);
+}
+
+/* CIT-style two-panel layout */
+.cit-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--space-4, 1rem);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .cit-layout { grid-template-columns: 1fr; }
+}
+
+.store-info-panel {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+  position: sticky;
+  top: 90px;
+}
+.store-info-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--color-primary, #1f8f77) 8%, white);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-text, #111);
+}
+.store-info-panel__body {
+  padding: 12px 14px;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.store-info-panel__row {
+  display: grid;
+  gap: 2px;
+}
+.store-info-panel__row dt {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+.store-info-panel__row dd {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text, #111);
+  overflow-wrap: anywhere;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.cit-layout__main {
+  min-width: 0; /* allow inputs to shrink inside grid */
+}
+
+/* Read-only value chip */
+.readonly-value {
+  padding: 9px 12px;
+  background: color-mix(in srgb, var(--color-primary, #1f8f77) 5%, white);
+  border: 1px dashed color-mix(in srgb, var(--color-primary, #1f8f77) 30%, transparent);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  color: var(--color-text, #111);
+}
+.readonly-value .muted {
+  color: var(--color-text-muted, #6b7280);
+  font-style: italic;
+}
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+/* Deposit total display strip */
+.deposit-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--color-primary, #1f8f77) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #1f8f77) 30%, transparent);
+  border-radius: 10px;
+  font-size: 1rem;
+}
+.deposit-total strong {
+  font-size: 1.25rem;
+  color: var(--color-primary, #1f8f77);
+}
+
+/* Denomination breakdown drawer (Input details…) */
+.denom-drawer {
+  margin-top: 6px;
+}
+.denom-drawer__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  color: var(--color-primary, #1f8f77);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.denom-drawer__toggle:hover {
+  text-decoration: underline;
+}
+.denom-drawer__hint {
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 400;
+}
+.denom-drawer__body {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-border, #e5e7eb) 25%, white);
+}
+.denom-drawer__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* Cash Services header bar (customer id / name / location / cutoff / arrival) */
+.change-order-header {
+  padding: 12px 16px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  margin-bottom: var(--space-4, 1rem);
+}
+.change-order-header__row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .change-order-header__row { grid-template-columns: repeat(2, 1fr); }
+}
+.change-order-header__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.change-order-header__label {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 600;
+}
+.change-order-header__value {
+  font-size: 0.9375rem;
+  color: var(--color-text, #111);
+  overflow-wrap: anywhere;
+}
+.change-order-header__select { padding: 6px 10px; font-size: 0.875rem; }
+
+/* Section heading with hint on the right */
+.section-heading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.section-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+/* Unit callout (denomination rules explainer) */
+.unit-callout {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: color-mix(in srgb, #3b82f6 8%, white);
+  border-left: 3px solid #3b82f6;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #1e3a8a;
+}
+
+/* Change order unit grid */
+.unit-grid {
+  display: grid;
+  gap: 4px;
+}
+.unit-grid__head {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.2fr 1fr;
+  gap: 12px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--color-border, #e5e7eb) 40%, white);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 600;
+}
+.unit-grid__row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.2fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border, #e5e7eb) 60%, transparent);
+}
+.unit-grid__label { font-size: 0.9375rem; color: var(--color-text, #111); }
+.unit-grid__multiple { font-size: 0.8125rem; color: var(--color-text-muted, #6b7280); }
+.unit-grid__subtotal { text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 700px) {
+  .unit-grid__head { display: none; }
+  .unit-grid__row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  .unit-grid__multiple { grid-column: 1 / -1; font-size: 0.75rem; }
+  .unit-grid__subtotal { text-align: right; font-weight: 600; }
+}
+
+.unit-totals {
+  display: grid;
+  gap: 4px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--color-primary, #1f8f77) 5%, white);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #1f8f77) 25%, transparent);
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.unit-totals__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+}
+.unit-totals__row--grand {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--color-primary, #1f8f77) 25%, transparent);
+  font-size: 1.0625rem;
+}
+.unit-totals__row--grand strong {
+  color: var(--color-primary, #1f8f77);
+}

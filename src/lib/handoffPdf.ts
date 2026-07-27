@@ -31,17 +31,25 @@ interface StepSubmission<T = unknown> {
   submitted_at: string;
 }
 
+// Per-run submissions map, populated by generateHandoffPdf() before any
+// section is drawn. Keyed by step number (1..7). A missing entry means the
+// step was never submitted (or its load failed) — render "Not submitted".
+//
+// NOTE: this replaced a prior implementation that read from a stray
+// localStorage key (`nst_mock_step_submission_${stepId}`) which was never
+// actually written by any code path in production. That defect made every
+// section of every exported PDF display "Status: Not submitted", regardless
+// of whether the retailer had actually completed and submitted the step.
+let currentSubmissions: Record<number, unknown> = {};
+
 function readSubmission<T = unknown>(stepId: StepId): StepSubmission<T> | null {
-  try {
-    const raw = localStorage.getItem(`nst_mock_step_submission_${stepId}`);
-    if (!raw) return null;
-    return JSON.parse(raw) as StepSubmission<T>;
-  } catch {
-    return null;
-  }
+  const payload = currentSubmissions[stepId];
+  if (!payload) return null;
+  return { payload: payload as T, submitted_at: '' };
 }
 
 interface Step1Payload {
+  // Legacy / normalized shape (kept for older submissions).
   storefrontName?: string;
   dba?: string;
   addressLine1?: string;
@@ -52,6 +60,21 @@ interface Step1Payload {
   hours?: Record<string, { open?: string; close?: string; closed?: boolean }>;
   ownerContact?: { name?: string; email?: string; phone?: string };
   managerContact?: { name?: string; email?: string; phone?: string };
+
+  // Current app shape (raw form values). Preferred when present.
+  legalName?: string;
+  street?: string;
+  suite?: string | null;
+  owner?: { name?: string; email?: string; phone?: string };
+  primaryContact?: { name?: string; email?: string; phone?: string };
+  primaryContactSameAsOwner?: boolean;
+  additionalContacts?: Array<{
+    name?: string;
+    role?: string;
+    email?: string | null;
+    phone?: string | null;
+  }>;
+  bohManager?: { name?: string; email?: string; phone?: string };
 }
 
 interface Step2Payload {
@@ -72,15 +95,42 @@ interface Step3Payload {
 }
 
 interface Step4Payload {
+  // Legacy shape (pre 2026-07-21)
   date?: string;
   bagNumber?: string;
   total?: number;
+  amount?: number;
+  // New CIT-aligned shape (2026-07-21+)
+  businessDate?: string;
+  preparedBy?: string;
+  verifiedBy?: string;
+  registerId?: string;
+  departureDate?: string;
+  shiftNumber?: string;
+  totalCurrency?: number;
+  totalCoin?: number;
+  comments?: string;
 }
 
 interface Step5Payload {
+  // Legacy shape
   deliveryDate?: string;
   total?: number;
+  // New Cash-Services-aligned shape (2026-07-21+)
+  arrivalDate?: string;
+  units?: Partial<Record<'ones'|'fives'|'tens'|'twenties'|'quarters'|'dimes'|'nickels', number>>;
+  comments?: string;
 }
+
+// Amanda's unit-value table for Step 5 PDF rendering.
+const STEP5_UNIT_VALUE: Record<string, number> = {
+  ones: 100, fives: 500, tens: 1000, twenties: 2000,
+  quarters: 500, dimes: 250, nickels: 100,
+};
+const STEP5_UNIT_LABEL: Record<string, string> = {
+  ones: '$1 bills', fives: '$5 bills', tens: '$10 bills', twenties: '$20 bills',
+  quarters: 'Quarters', dimes: 'Dimes', nickels: 'Nickels',
+};
 
 interface Step6Payload {
   contactName?: string;
@@ -92,9 +142,28 @@ interface Step7Payload {
   preferredDate?: string;
   serviceDays?: string[];
   frequency?: string;
+  /** Legacy — removed from UI 2026-07-21 but retained here for old submissions. */
   timeWindow?: string;
+  /** Added 2026-07-21 — "When do you wish to begin service?" */
+  serviceStartTiming?: string;
+  /** Added 2026-07-21 — far-out / not-sure-yet check-back cadence. */
+  checkBackCadence?: string;
   driverNotes?: string;
 }
+
+const SERVICE_START_LABEL: Record<string, string> = {
+  asap: 'ASAP',
+  '0_3mo': '0–3 months',
+  '3_6mo': '3–6 months',
+  '6_9mo': '6–9 months',
+  '9_12mo': '9–12 months',
+};
+
+const CHECK_BACK_LABEL: Record<string, string> = {
+  every_2_weeks: 'Every 2 weeks',
+  monthly: 'Monthly',
+  they_reach_out: 'They’ll reach out when ready',
+};
 
 function formatMoney(n: number | undefined | null): string {
   if (n == null || Number.isNaN(n)) return '—';
@@ -298,6 +367,12 @@ function buildKvTable(
 export interface HandoffContext {
   storefrontName: string;
   sfdcAccountId: string | null;
+  /**
+   * Submitted payloads keyed by step number (1..7). Callers must preload this
+   * via `loadAllSubmissions()` from stepService before calling the generator;
+   * jsPDF is synchronous so we can't fetch here.
+   */
+  submissions: Record<number, unknown>;
 }
 
 /**
@@ -305,6 +380,12 @@ export interface HandoffContext {
  * the filename used. Triggers a browser download via jsPDF's `save()`.
  */
 export function generateHandoffPdf(ctx: HandoffContext): string {
+  // Publish the preloaded submissions map so readSubmission() can find it.
+  // Assigning to a module-scoped var (rather than passing through every
+  // section) keeps the diff small and mirrors the shape of the old (broken)
+  // localStorage read.
+  currentSubmissions = ctx.submissions ?? {};
+
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
   // Cover page
@@ -318,38 +399,70 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
   const s1 = readSubmission<Step1Payload>(1)?.payload;
   y = drawSectionHeader(doc, '1. Store profile & contacts', y);
   if (s1) {
+    // Prefer raw form values when they're present; fall back to the older
+    // normalized shape so PDFs still render for pre-2026-07-21 submissions.
+    const owner = s1.owner ?? s1.ownerContact ?? {};
+    const primary = s1.primaryContact ?? s1.ownerContact ?? {};
+    const primarySameAsOwner = s1.primaryContactSameAsOwner === true;
+    const legal = s1.legalName ?? s1.storefrontName ?? ctx.storefrontName ?? '—';
+    const dba = s1.storefrontName ?? s1.dba ?? '—';
+    const streetLine1 = s1.street ?? s1.addressLine1 ?? '';
+    const streetLine2 = s1.suite ?? s1.addressLine2 ?? '';
     const address = [
-      s1.addressLine1,
-      s1.addressLine2,
+      streetLine1,
+      streetLine2,
       [s1.city, s1.state, s1.zip].filter(Boolean).join(', '),
     ]
       .filter(Boolean)
       .join('\n');
-    y = buildKvTable(
-      doc,
+
+    const rows: Array<[string, string]> = [
+      ['Legal entity', legal],
+      ['Storefront / DBA', dba],
+      ['Address', address || '—'],
       [
-        ['Storefront', s1.storefrontName ?? ctx.storefrontName ?? '—'],
-        ['DBA', s1.dba ?? '—'],
-        ['Address', address || '—'],
-        [
-          'Owner',
-          [s1.ownerContact?.name, s1.ownerContact?.phone, s1.ownerContact?.email]
-            .filter(Boolean)
-            .join(' · ') || '—',
-        ],
-        [
-          'Manager',
-          [
-            s1.managerContact?.name,
-            s1.managerContact?.phone,
-            s1.managerContact?.email,
-          ]
-            .filter(Boolean)
-            .join(' · ') || '—',
-        ],
+        'Owner',
+        [owner.name, owner.phone, owner.email]
+          .filter(Boolean)
+          .join(' · ') || '—',
       ],
-      y,
-    );
+      [
+        'Business card contact',
+        primarySameAsOwner
+          ? 'Same as owner'
+          : ([primary.name, primary.phone, primary.email]
+              .filter(Boolean)
+              .join(' · ') || '—'),
+      ],
+    ];
+
+    // Additional contacts — one row each, only if the retailer added any.
+    if (Array.isArray(s1.additionalContacts) && s1.additionalContacts.length > 0) {
+      for (const c of s1.additionalContacts) {
+        if (!c?.name) continue;
+        const roleLabel = ({
+          manager: 'Manager',
+          assistant_manager: 'Assistant Manager',
+          general_manager: 'General Manager',
+          staff: 'Staff',
+        } as Record<string, string>)[c.role ?? ''] ?? (c.role ?? 'Contact');
+        rows.push([
+          roleLabel,
+          [c.name, c.phone, c.email].filter(Boolean).join(' · '),
+        ]);
+      }
+    }
+
+    // Legacy BOH manager field — only shown if populated.
+    const boh = s1.bohManager ?? s1.managerContact;
+    if (boh && (boh.name || boh.email || boh.phone)) {
+      rows.push([
+        'BOH manager',
+        [boh.name, boh.phone, boh.email].filter(Boolean).join(' · ') || '—',
+      ]);
+    }
+
+    y = buildKvTable(doc, rows, y);
   } else {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
@@ -431,17 +544,32 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
 
-  // Step 4 — Sample deposit
-  y = checkPageBreak(doc, y, 80);
+  // Step 4 — Sample deposit (CIT-aligned)
+  y = checkPageBreak(doc, y, 100);
   y = drawSectionHeader(doc, '4. Sample deposit (dry run)', y);
   const s4 = readSubmission<Step4Payload>(4)?.payload;
   if (s4) {
+    const currency = s4.totalCurrency;
+    const coin = s4.totalCoin;
+    const legacyTotal = s4.total ?? s4.amount;
+    const totalRow: number | undefined =
+      currency != null || coin != null
+        ? (Number(currency) || 0) + (Number(coin) || 0)
+        : legacyTotal;
     y = buildKvTable(
       doc,
       [
-        ['Deposit date', formatDate(s4.date)],
         ['Bag number', s4.bagNumber ?? '—'],
-        ['Total', formatMoney(s4.total)],
+        ['Business date', formatDate(s4.businessDate ?? s4.date)],
+        ['Prepared by', s4.preparedBy ?? '—'],
+        ['Verified by', s4.verifiedBy ?? '—'],
+        ['Register id', s4.registerId ?? '—'],
+        ['Departure date', formatDate(s4.departureDate)],
+        ['Shift', s4.shiftNumber ? `Shift ${s4.shiftNumber}` : '—'],
+        ['Total currency', currency != null ? formatMoney(currency) : '—'],
+        ['Total coin', coin != null ? formatMoney(coin) : '—'],
+        ['Total deposit', totalRow != null ? formatMoney(totalRow) : '—'],
+        ['Comments', s4.comments || '—'],
       ],
       y,
     );
@@ -449,19 +577,31 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
 
-  // Step 5 — Sample change order
-  y = checkPageBreak(doc, y, 80);
+  // Step 5 — Sample change order (Cash Services-aligned)
+  y = checkPageBreak(doc, y, 100);
   y = drawSectionHeader(doc, '5. Sample change order (dry run)', y);
   const s5 = readSubmission<Step5Payload>(5)?.payload;
   if (s5) {
-    y = buildKvTable(
-      doc,
-      [
-        ['Delivery date', formatDate(s5.deliveryDate)],
-        ['Total', formatMoney(s5.total)],
-      ],
-      y,
-    );
+    const rows: Array<[string, string]> = [];
+    rows.push(['Arrival date', formatDate(s5.arrivalDate ?? s5.deliveryDate)]);
+    if (s5.units) {
+      let unitTotal = 0;
+      for (const [key, val] of Object.entries(s5.units)) {
+        const n = Number(val) || 0;
+        if (n <= 0) continue;
+        const uv = STEP5_UNIT_VALUE[key] ?? 0;
+        unitTotal += n * uv;
+        rows.push([
+          `${STEP5_UNIT_LABEL[key] ?? key} × ${n}`,
+          formatMoney(n * uv),
+        ]);
+      }
+      rows.push(['Total USD', formatMoney(unitTotal)]);
+    } else if (s5.total != null) {
+      rows.push(['Total', formatMoney(s5.total)]);
+    }
+    if (s5.comments) rows.push(['Comments', s5.comments]);
+    y = buildKvTable(doc, rows, y);
   } else {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);
   }
@@ -489,37 +629,59 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
   y = drawSectionHeader(doc, '7. First pickup & ongoing service', y);
   const s7 = readSubmission<Step7Payload>(7)?.payload;
   if (s7) {
+    const freqLabel = s7.frequency
+      ? (FREQ_LABEL[s7.frequency] ?? s7.frequency)
+      : '—';
+    const cadenceLabel = s7.checkBackCadence
+      ? (CHECK_BACK_LABEL[s7.checkBackCadence] ?? s7.checkBackCadence)
+      : null;
+
     if (s7.deferred) {
+      // "Not sure yet" — no timing, no date. We do still have frequency and
+      // (per Amanda 2026-07-21) a customer-chosen check-back cadence.
       y = buildKvTable(
         doc,
         [
           ['Status', 'Deferred — retailer will confirm date later'],
-          ['Nudge cadence', 'Every 2 weeks (max 6 nudges = 12 weeks)'],
+          ['Frequency', freqLabel],
+          ['Check-back cadence', cadenceLabel ?? '—'],
         ],
         y,
       );
     } else {
+      const timingLabel = s7.serviceStartTiming
+        ? (SERVICE_START_LABEL[s7.serviceStartTiming] ?? s7.serviceStartTiming)
+        : '—';
       const days =
         s7.serviceDays?.map((d) => DAY_FULL[d] ?? d).join(', ') || '—';
-      y = buildKvTable(
-        doc,
-        [
-          ['First pickup', formatDate(s7.preferredDate)],
-          ['Service days', days],
-          [
-            'Frequency',
-            s7.frequency ? (FREQ_LABEL[s7.frequency] ?? s7.frequency) : '—',
-          ],
-          [
-            'Time window',
-            s7.timeWindow
-              ? (TIME_LABEL[s7.timeWindow] ?? s7.timeWindow)
-              : '—',
-          ],
-          ['Driver notes', s7.driverNotes?.trim() || '—'],
-        ],
-        y,
-      );
+
+      // Row set depends on whether this is a near-term (has date) or
+      // far-out (has check-back cadence) submission.
+      const rows: [string, string][] = [
+        ['Frequency', freqLabel],
+        ['When to begin service', timingLabel],
+      ];
+      if (s7.preferredDate) {
+        rows.push(['First pickup (Monday)', formatDate(s7.preferredDate)]);
+      }
+      if (cadenceLabel) {
+        rows.push(['Check-back cadence', cadenceLabel]);
+      }
+      // Historical field — only include if actually populated.
+      if (s7.serviceDays && s7.serviceDays.length > 0) {
+        rows.push(['Service days', days]);
+      }
+      // Legacy field — hidden if empty, shown for old submissions that
+      // still have a time window recorded.
+      if (s7.timeWindow) {
+        rows.push([
+          'Time window (legacy)',
+          TIME_LABEL[s7.timeWindow] ?? s7.timeWindow,
+        ]);
+      }
+      rows.push(['Driver notes', s7.driverNotes?.trim() || '—']);
+
+      y = buildKvTable(doc, rows, y);
     }
   } else {
     y = buildKvTable(doc, [['Status', 'Not submitted']], y);

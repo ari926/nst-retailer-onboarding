@@ -61,12 +61,11 @@ function deliveryDateFiveDaysOut(): string {
 /**
  * Build a first-pickup date >= 10 calendar days out (for Step 7).
  * Padded to 14 days for safety.
+ *
+ * Superseded 2026-07-21 by firstMondayAtLeastTenDaysOut() below, since
+ * Step 7 now requires Monday-only dates within a timing window. Kept as a
+ * comment for historical reference.
  */
-function firstPickupDateTwoWeeksOut(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 14);
-  return d.toISOString().split('T')[0];
-}
 
 const demoStep1: Step1Values = {
   legalName: 'ZZ TEAM DEMO LLC',
@@ -86,11 +85,20 @@ const demoStep1: Step1Values = {
     sun: { closed: true, open: '', close: '' },
   },
   accessNotes: 'Side entrance, ring buzzer marked "Demo".',
+  owner: {
+    name: 'Ari Demo',
+    email: 'demo@example.com',
+    phone: '2155551234',
+  },
   primaryContact: {
     name: 'Ari Demo',
     email: 'demo@example.com',
     phone: '2155551234',
   },
+  primaryContactSameAsOwner: true,
+  additionalContacts: [
+    { name: 'Alex Manager', role: 'general_manager', email: 'alex.gm@example.com', phone: '2155559999' },
+  ],
   bohManager: {
     name: 'Pat Demo',
     email: 'pat.demo@example.com',
@@ -107,8 +115,8 @@ const demoStep2: Step2Values = {
   storageMethod: 'under_counter',
   storageMethodOther: '',
   keyHolders: [
-    { name: 'Ari Demo', role: 'Owner', location: 'Office desk drawer' },
-    { name: 'Pat Demo', role: 'Manager', location: 'Locked cabinet near safe' },
+    { name: 'Ari Demo', role: 'Owner' },
+    { name: 'Pat Demo', role: 'Manager' },
   ],
   provisionalCredit: 'want_to_set',
 };
@@ -123,20 +131,41 @@ const demoStep3: Step3Values = {
   mismatchNotes: '',
 };
 
+// Updated 2026-07-21 per Amanda: Step 4 now uses CIT ticket fields; Step 5
+// uses Cash Services unit-based change order.
 const demoStep4: Step4Values = {
-  amount: 100,
-  date: new Date().toISOString().split('T')[0],
   bagNumber: 'DEMO-001',
-  // 5 twenties = $100 — matches amount exactly so superRefine passes
-  denominations: { hundred: 0, fifty: 0, twenty: 5, ten: 0, five: 0, one: 0 },
-  notes: 'Demo dry-run deposit',
+  preparedBy: 'Ari Demo',
+  businessDate: new Date().toISOString().split('T')[0],
+  verifiedBy: 'Pat Demo',
+  registerId: 'REG-01',
+  departureDate: new Date().toISOString().split('T')[0],
+  shiftNumber: '1',
+  totalCurrency: 100,
+  totalCoin: 0,
+  useCurrencyBreakdown: true,
+  useCoinBreakdown: false,
+  // 5 twenties = $100 — matches totalCurrency
+  currencyBreakdown: { hundred: 0, fifty: 0, twenty: 5, ten: 0, five: 0, one: 0 },
+  coinBreakdown: {
+    dollarCoins: 0, halfDollars: 0, quarters: 0, dimes: 0, nickels: 0, pennies: 0,
+  },
+  comments: 'Demo dry-run deposit',
 };
 
+// Pick next Wed for the demo change order arrival date.
+function nextWednesdayIso(): string {
+  const d = new Date();
+  const daysToWed = (3 - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysToWed);
+  return d.toISOString().split('T')[0];
+}
+void deliveryDateFiveDaysOut; // kept for reference; new demo uses Wed arrival
+
 const demoStep5: Step5Values = {
-  deliveryDate: deliveryDateFiveDaysOut(),
-  rolls: { quarters: 1, dimes: 0, nickels: 0, pennies: 0 },
-  bills: { singles: 0, fives: 0, tens: 0, twenties: 0 },
-  notes: 'Demo change order',
+  arrivalDate: nextWednesdayIso(),
+  units: { ones: 1, fives: 0, tens: 0, twenties: 0, quarters: 1, dimes: 0, nickels: 0 },
+  comments: 'Demo change order (1 unit of $1 bills = $100; 1 quarter unit = $500)',
 };
 
 const demoStep6: Step6Values = {
@@ -144,11 +173,22 @@ const demoStep6: Step6Values = {
   contactEmail: 'demo.billing@example.com',
 };
 
+/** Nearest Monday >= 10 calendar days from now — valid for the new Step 7 near-term picker. */
+function firstMondayAtLeastTenDaysOut(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 10);
+  while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
 const demoStep7: Step7Values = {
   deferred: false,
-  preferredDate: firstPickupDateTwoWeeksOut(),
+  serviceStartTiming: '0_3mo',
+  preferredDate: firstMondayAtLeastTenDaysOut(),
+  checkBackCadence: '',
   serviceDays: ['mon', 'wed', 'fri'],
-  timeWindow: 'am',
+  timeWindow: '',
   frequency: 'thrice_weekly',
   driverNotes: 'Demo pickup notes.',
 };

@@ -191,3 +191,62 @@ export async function submitStep<T>(stepId: StepId, payload: T): Promise<void> {
 
   throw new Error('No authenticated session and no kickoff token in URL');
 }
+
+/**
+ * Load submitted payloads for every step in one go. Used by the Ops Handoff
+ * PDF generator so it can render the *real* submitted values instead of an
+ * empty localStorage mock (which caused every section to print
+ * "Status: Not submitted" regardless of actual completion).
+ *
+ * Returns a map keyed by step number (1..7). Steps that were never submitted
+ * (or errored on load) are simply absent from the map — callers should treat
+ * a missing entry as "not submitted".
+ */
+export async function loadAllSubmissions(): Promise<Record<number, unknown>> {
+  const result: Record<number, unknown> = {};
+
+  // Demo mode — return the same fully-valid demo payloads the wizard uses,
+  // so a demo-mode user can preview the PDF without hitting the network.
+  if (isDemoMode()) {
+    for (const stepId of [1, 2, 3, 4, 5, 6, 7] as StepId[]) {
+      const p = getDemoPayload<unknown>(stepId);
+      if (p) result[stepId] = p;
+    }
+    return result;
+  }
+
+  if (!readToken()) {
+    // No token means we can't authenticate against submit-step. Fall through
+    // to the (rarely-used) legacy mock-auth localStorage mirror below.
+    if (MOCK_AUTH_ENABLED) {
+      for (const stepId of [1, 2, 3, 4, 5, 6, 7]) {
+        const raw = localStorage.getItem(mockKey(stepId as StepId, 'submission'));
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw) as { payload?: unknown };
+          if (parsed?.payload) result[stepId] = parsed.payload;
+        } catch { /* ignore corrupt entry */ }
+      }
+    }
+    return result;
+  }
+
+  // Fetch all 7 steps in parallel. Individual failures are non-fatal — a
+  // failing step just yields an absent entry in the result, which the PDF
+  // generator will render as "Not submitted" the same as a truly-empty step.
+  await Promise.all(
+    ([1, 2, 3, 4, 5, 6, 7] as const).map(async (stepId) => {
+      try {
+        const resp = await callSubmitStep(stepId, 'load', undefined);
+        const payload = (resp as { payload?: unknown } | undefined)?.payload;
+        if (payload && typeof payload === 'object') {
+          result[stepId] = payload;
+        }
+      } catch (e) {
+        console.warn(`[stepService] loadAllSubmissions: step ${stepId} load failed`, e);
+      }
+    }),
+  );
+
+  return result;
+}

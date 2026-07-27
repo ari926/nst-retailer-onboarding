@@ -191,7 +191,17 @@ interface Step1Payload {
   city?: string;
   state?: string;
   zip?: string;
+  // Added 2026-07-21 — Owner is now first-class on the business card.
+  owner?: { name?: string; email?: string; phone?: string };
   primaryContact?: { name?: string; email?: string; phone?: string };
+  primaryContactSameAsOwner?: boolean;
+  // Added 2026-07-21 — optional secondary contacts (Manager / Asst / GM / Staff).
+  additionalContacts?: Array<{
+    name?: string;
+    role?: string;
+    email?: string | null;
+    phone?: string | null;
+  }>;
   bohManager?: { name?: string | null; email?: string | null; phone?: string | null } | null;
   hours?: unknown;
 }
@@ -641,6 +651,9 @@ Deno.serve(async (req) => {
         serviceDays?: string[];
         timeWindow?: string;
         frequency?: string;
+        // Added 2026-07-21 (Amanda's work list)
+        serviceStartTiming?: string;
+        checkBackCadence?: string;
         [key: string]: unknown;
       };
       const sfToken = await getSalesforceAccessToken();
@@ -690,6 +703,10 @@ Deno.serve(async (req) => {
           days: p.serviceDays,
           window: p.timeWindow,
           frequency: p.frequency,
+          // New 2026-07-21 fields — stamped into notes so ops sees them in SF
+          // even though they don't have dedicated Account/Opp columns yet.
+          serviceStartTiming: p.serviceStartTiming,
+          checkBackCadence: p.checkBackCadence,
           completedAt: new Date().toISOString(),
         });
         const r = await sfPatch(sfToken, 'Opportunity', tokRow.sfdc_opportunity_id, oppFields);

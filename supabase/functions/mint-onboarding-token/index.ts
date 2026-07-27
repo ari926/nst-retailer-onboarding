@@ -108,18 +108,27 @@ Deno.serve(async (req) => {
   // Existing-token lookup — only reuse customer-facing tokens.
   // Admin tokens always mint fresh so each admin session is independently revocable
   // and short-lived. (We don't want two admins sharing the same token URL.)
-  if (source === 'intro_email') {
-    const { data: existing } = await supabase
+  //
+  // NOTE: The DB has a partial-unique index on (sfdc_opportunity_id, source)
+  // WHERE revoked_at IS NULL. That guarantees at most one active token per
+  // (opportunity, source) pair, but a race is still possible between the
+  // SELECT below and the INSERT further down — two concurrent "send intro
+  // email" clicks would each SELECT no row, then both try to INSERT and the
+  // second would hit 23505. We handle that below by re-fetching on unique
+  // violation and returning the existing token.
+  const lookupExisting = async () =>
+    await supabase
       .from('onboarding_tokens')
       .select('token, expires_at')
-      .eq('sfdc_account_id', accountId)
       .eq('sfdc_opportunity_id', opportunityId)
-      .eq('source', 'intro_email')
+      .eq('source', source)
       .is('revoked_at', null)
-      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+
+  if (source === 'intro_email') {
+    const { data: existing } = await lookupExisting();
 
     if (existing?.token) {
       return json(200, {
@@ -152,6 +161,30 @@ Deno.serve(async (req) => {
   });
 
   if (insertErr) {
+    // Unique violation on (opportunity_id, source) where revoked_at IS NULL.
+    // This is the race described above; also the observed failure mode when
+    // an admin_access token already exists and an intro_email mint is
+    // attempted (or vice versa on a stale schema). Treat as "another live
+    // token exists" and reuse it if source matches, otherwise surface a
+    // helpful error the frontend can act on.
+    if ((insertErr as { code?: string }).code === '23505') {
+      const { data: existing } = await lookupExisting();
+      if (existing?.token) {
+        return json(200, {
+          token: existing.token,
+          expires_at: existing.expires_at,
+          portal_url: `${PORTAL_BASE_URL}/?t=hq_${existing.token}`,
+          reused: true,
+          source,
+        });
+      }
+      // Fell through: constraint hit but nothing to return. Very unusual
+      // (would mean the row was revoked between insert and lookup).
+      return json(409, {
+        error: 'token_conflict',
+        detail: 'A conflicting token already exists but could not be reused.',
+      });
+    }
     return json(500, { error: 'token_insert_failed', detail: insertErr.message });
   }
 

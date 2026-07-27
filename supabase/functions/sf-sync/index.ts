@@ -260,10 +260,22 @@ const US_STATE_TO_TZ: Record<string, string> = {
 
 /**
  * Step 1 — Profile.
- * App shape: legalName, storefrontName, street, suite, city, state, zip,
- *   hours, accessNotes, primaryContact{name,email,phone}, bohManager{name,email,phone}.
+ * App shape (as of 2026-07-21):
+ *   legalName, storefrontName, street, suite, city, state, zip, hours,
+ *   accessNotes,
+ *   owner{name,email,phone},
+ *   primaryContact{name,email,phone},
+ *   primaryContactSameAsOwner: boolean,
+ *   additionalContacts: [{name, role, email, phone}],
+ *   bohManager{name,email,phone}
  */
 function normalizeStep1(p: any) {
+  // Owner is the source of truth for the Owner Contact upsert. Older
+  // submissions (pre 2026-07-21) don't have `owner` populated — fall back to
+  // primaryContact so existing records still sync cleanly.
+  const owner = p.owner && (p.owner.name || p.owner.email || p.owner.phone)
+    ? p.owner
+    : p.primaryContact;
   return {
     // Account.Name = the legal entity. Storefront name lives in DBA__c if needed.
     storefrontName: p.legalName ?? p.storefrontName,
@@ -272,8 +284,13 @@ function normalizeStep1(p: any) {
     storeType: undefined, // not collected on the form today
     loadingDockNotes: p.accessNotes,
     nstTempCode: undefined, // never re-PATCH the temp code; SF generated it
-    ownerContact: p.primaryContact,
+    ownerContact: owner,
     managerContact: p.bohManager?.email ? p.bohManager : undefined,
+    // Passed through so the notes writer downstream can append them to
+    // Onboarding_Notes__c. Nothing else on SF consumes this field today.
+    additionalContacts: Array.isArray(p.additionalContacts)
+      ? p.additionalContacts.filter((c: any) => c && c.name)
+      : undefined,
   };
 }
 
@@ -389,11 +406,17 @@ function normalizeStep7(p: any) {
 
   // Concatenate service days + preferred date + driver notes into Loading_Dock_Notes
   // since SF doesn't have a multi-select day-of-week field today.
+  //
+  // 2026-07-21 (Amanda's work list): also include serviceStartTiming ("When
+  // do you wish to begin service?") and checkBackCadence so ops can see them
+  // in SF even before we add dedicated columns for them.
   const noteParts: string[] = [];
+  if (p.serviceStartTiming) noteParts.push(`Begin service: ${p.serviceStartTiming}`);
   if (Array.isArray(p.serviceDays) && p.serviceDays.length > 0) {
     noteParts.push(`Service days: ${p.serviceDays.join(', ')}`);
   }
   if (p.preferredDate) noteParts.push(`First pickup: ${p.preferredDate}`);
+  if (p.checkBackCadence) noteParts.push(`Check-back cadence: ${p.checkBackCadence}`);
   if (p.driverNotes) noteParts.push(p.driverNotes);
 
   return {

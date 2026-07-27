@@ -105,6 +105,28 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  // Revoke any prior active admin_access token for this opportunity BEFORE we
+  // insert the new one. The table has a partial-unique index on
+  // (sfdc_opportunity_id, source) WHERE revoked_at IS NULL, so a second admin
+  // click without this revoke would 23505 on insert. We only revoke the
+  // admin_access token(s) here; any active intro_email token stays live so the
+  // customer's own link keeps working.
+  //
+  // Non-fatal: if this errors we still try to insert; the insert will surface
+  // a specific error the frontend can act on. But we should never silently
+  // swallow this because it means old admin URLs remain live longer than
+  // intended.
+  const nowIso = new Date().toISOString();
+  const { error: revokeErr } = await admin
+    .from('onboarding_tokens')
+    .update({ revoked_at: nowIso })
+    .eq('sfdc_opportunity_id', opportunityId)
+    .eq('source', 'admin_access')
+    .is('revoked_at', null);
+  if (revokeErr) {
+    console.error('[hq-mint-portal-token] revoke prior admin tokens failed', revokeErr);
+  }
+
   const { error: insertErr } = await admin.from('onboarding_tokens').insert({
     token,
     sfdc_account_id: accountId,
@@ -114,11 +136,19 @@ Deno.serve(async (req) => {
     expires_at: expiresAt,
     source: 'admin_access',
     acting_admin_email: actingAdminEmail,
-    hq_minted_at: new Date().toISOString(),
+    hq_minted_at: nowIso,
     hq_minted_by_signature: `jwt:${user.id.slice(0, 8)}`, // trace marker; not a real sig
   });
 
   if (insertErr) {
+    // Extremely unlikely after the revoke above, but keep the specific error
+    // shape so HQ's toast can distinguish it from a generic 500.
+    if ((insertErr as { code?: string }).code === '23505') {
+      return json(409, {
+        error: 'token_conflict',
+        detail: 'An active admin token already exists for this opportunity. Revoke it and try again.',
+      });
+    }
     return json(500, { error: 'token_insert_failed', detail: insertErr.message });
   }
 

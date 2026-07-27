@@ -269,24 +269,11 @@ export default function Step2Safe() {
                         />
                       </div>
                     </div>
-                    <div className="field">
-                      <label
-                        htmlFor={`kh-loc-${idx}`}
-                        className="field-label field-required"
-                      >
-                        {t('step_2_safe.fields.key_holder_location')}
-                      </label>
-                      <input
-                        id={`kh-loc-${idx}`}
-                        className="input"
-                        {...register(`keyHolders.${idx}.location` as const)}
-                      />
-                      {errors.keyHolders?.[idx]?.location && (
-                        <span className="field-error">
-                          {errors.keyHolders[idx]?.location?.message as string}
-                        </span>
-                      )}
-                    </div>
+                    {/*
+                     * Per Amanda 2026-07-21: removed "Where the key is kept"
+                     * field. Customers pushed back on disclosing key location.
+                     * We now collect name + role only.
+                     */}
                     {fields.length > 1 && (
                       <button
                         type="button"
@@ -302,33 +289,41 @@ export default function Step2Safe() {
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() => append({ name: '', role: '', location: '' })}
+                onClick={() => append({ name: '', role: '' })}
               >
                 <Plus size={14} aria-hidden /> {t('step_2_safe.fields.add_key_holder')}
               </button>
             </div>
 
-            <hr className="divider" />
-
-            {/* Provisional credit */}
-            <div className="field">
-              <label className="field-label field-required">
-                {t('step_2_safe.fields.provisional_credit_question')}
-              </label>
-              <div className="radio-col">
-                {PROVISIONAL_OPTIONS.map((opt) => (
-                  <label key={opt} className="radio-option">
-                    <input type="radio" value={opt} {...register('provisionalCredit')} />
-                    <span>{t(`step_2_safe.fields.provisional_options.${opt}`)}</span>
+            {/*
+             * Provisional credit — SmartSafe-only.
+             * Per Amanda 2026-07-21: this question only applies when a
+             * SmartSafe is on site (provisional credit is a SmartSafe feature).
+             * Hidden entirely when hasSmartSafe === 'no'.
+             */}
+            {hasSmartSafe === 'yes' && (
+              <>
+                <hr className="divider" />
+                <div className="field">
+                  <label className="field-label field-required">
+                    {t('step_2_safe.fields.provisional_credit_question')}
                   </label>
-                ))}
-              </div>
-              {errors.provisionalCredit && (
-                <span className="field-error">
-                  {errors.provisionalCredit.message as string}
-                </span>
-              )}
-            </div>
+                  <div className="radio-col">
+                    {PROVISIONAL_OPTIONS.map((opt) => (
+                      <label key={opt} className="radio-option">
+                        <input type="radio" value={opt} {...register('provisionalCredit')} />
+                        <span>{t(`step_2_safe.fields.provisional_options.${opt}`)}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.provisionalCredit && (
+                    <span className="field-error">
+                      {errors.provisionalCredit.message as string}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </StepShell>
       </form>

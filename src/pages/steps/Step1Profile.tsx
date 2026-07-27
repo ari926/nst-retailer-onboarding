@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Controller, FormProvider, useForm, useFormContext } from 'react-hook-form';
+import {
+  Controller,
+  FormProvider,
+  useFieldArray,
+  useForm,
+  useFormContext,
+} from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -13,23 +19,26 @@ import {
   step1Schema,
   step1Defaults,
   US_STATES,
+  ADDITIONAL_CONTACT_ROLES,
+  type AdditionalContactRole,
   type Step1Values,
 } from './Step1Profile.schema';
 
 /**
- * Step 1 — Confirm store profile (v2 review-card layout).
+ * Step 1 — Confirm store profile (v3 review-card layout, 2026-07-21).
  *
- * The retailer arrives here from their kickoff email link `/?t=<token>`.
- * Home redirects to `/onboarding/profile?t=<token>`. We use the token to fetch
- * fresh prefill from Salesforce (Account.BillingStreet/City/State/PostalCode/
- * Phone/Website + the primary Contact) on first load and seed the form.
+ * Amanda Kristoff's rework:
+ *   • Business card now carries Owner info (name/email/phone).
+ *   • Old "Owner / Primary contact" card is now "Primary Contact".
+ *     Because the Owner is usually ALSO the primary contact, this card
+ *     auto-fills from Owner via a "Same as owner" toggle.
+ *   • Operating hours surfaced as mandatory.
+ *   • New "Additional contacts" card lets the retailer add optional
+ *     Manager / Asst Mgr / GM / Staff people with role, name, email, phone.
  *
- * UI is review-first: each card shows what we have on file with an Edit button
- * that flips just that card into edit mode. Default operating hours are
- * 10:00 AM – 6:00 PM × 7 days, which the retailer is asked to verify.
- *
- * Autosaves a draft every 1.5s after changes, and on submit writes to
- * step_submissions, marks the step complete, and navigates to step 2.
+ * We keep the back-of-house Manager card as-is for backward-compat with
+ * older drafts, but it lives below the new Additional Contacts card and
+ * is labelled as optional/legacy.
  */
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -38,15 +47,32 @@ const DAY_LABEL: Record<DayKey, string> = {
   mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
 };
 
-type EditKey = 'business' | 'address' | 'hours' | 'owner' | 'manager';
+const ROLE_LABEL: Record<AdditionalContactRole, string> = {
+  manager: 'Manager',
+  assistant_manager: 'Assistant Manager',
+  general_manager: 'General Manager',
+  staff: 'Staff',
+};
+
+type EditKey =
+  | 'business'
+  | 'address'
+  | 'hours'
+  | 'primary'
+  | 'additional'
+  | 'manager';
 
 // Human-readable names for cards, used in the specific validation toast.
 // Keep in sync with the ReviewCard `id` prop below (`card-<key>`).
 const CARD_LABEL: Record<EditKey, string> = {
-  business: 'Business',
+  // Card labels here are what appears in validation toasts. Keep aligned to
+  // the on-screen card titles below (line 818 for the "business card" and
+  // the BusinessCard render).
+  business: 'Business & Owner',
   address: 'Address',
   hours: 'Operating hours',
-  owner: 'Owner / Primary contact',
+  primary: 'Business card',
+  additional: 'Additional contacts',
   manager: 'Back-of-house manager',
 };
 
@@ -55,10 +81,11 @@ const CARD_LABEL: Record<EditKey, string> = {
 function invalidCardsFromErrors(errors: Record<string, unknown>): Set<EditKey> {
   const set = new Set<EditKey>();
   if (!errors) return set;
-  if (errors.legalName || errors.storefrontName) set.add('business');
+  if (errors.legalName || errors.storefrontName || errors.owner) set.add('business');
   if (errors.street || errors.city || errors.state || errors.zip) set.add('address');
   if (errors.hours) set.add('hours');
-  if (errors.primaryContact) set.add('owner');
+  if (errors.primaryContact || errors.primaryContactSameAsOwner) set.add('primary');
+  if (errors.additionalContacts) set.add('additional');
   if (errors.bohManager) set.add('manager');
   return set;
 }
@@ -84,7 +111,7 @@ export default function Step1Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [editing, setEditing] = useState<Record<EditKey, boolean>>({
-    business: false, address: false, hours: false, owner: false, manager: false,
+    business: false, address: false, hours: false, primary: false, additional: false, manager: false,
   });
   // Cards flagged by the last failed submit. Cleared when a card is opened for
   // edit (user is fixing it) or when submit succeeds.
@@ -101,7 +128,7 @@ export default function Step1Profile() {
     return {
       business: !!(acct?.Name),
       address: !!(acct?.BillingStreet || acct?.BillingCity || acct?.BillingPostalCode),
-      owner: !!(contact?.Email || contact?.FirstName),
+      primary: !!(contact?.Email || contact?.FirstName),
     };
   }, [ctx.data]);
 
@@ -118,14 +145,73 @@ export default function Step1Profile() {
     mode: 'onBlur',
     shouldUnregister: false, // keep field values when sub-editors unmount
   });
-  const { handleSubmit, watch, reset, getValues } = methods;
+  const { handleSubmit, watch, reset, getValues, setValue } = methods;
 
-  // Load draft once on mount
+  // "Primary Contact = Same as Owner" auto-fill.
+  //
+  // When the toggle is on, we mirror `owner` into `primaryContact` on every
+  // change. This lets us keep BOTH blocks in the submitted payload (ops still
+  // reads `primaryContact` for legacy Salesforce syncs) without asking the
+  // retailer to type the same info twice.
+  const sameAsOwner = watch('primaryContactSameAsOwner');
+  const ownerName = watch('owner.name');
+  const ownerEmail = watch('owner.email');
+  const ownerPhone = watch('owner.phone');
+  useEffect(() => {
+    if (!sameAsOwner) return;
+    setValue('primaryContact.name', ownerName ?? '', { shouldDirty: false });
+    setValue('primaryContact.email', ownerEmail ?? '', { shouldDirty: false });
+    setValue('primaryContact.phone', ownerPhone ?? '', { shouldDirty: false });
+  }, [sameAsOwner, ownerName, ownerEmail, ownerPhone, setValue]);
+
+  // Load draft once on mount.
+  //
+  // Older drafts (pre 2026-07-21) don't carry the new fields (`owner`,
+  // `primaryContactSameAsOwner`, `additionalContacts`). If we blindly reset()
+  // to that raw draft, RHF will treat those fields as `undefined` and the
+  // "Same as owner" checkbox will render UNCHECKED even though the schema
+  // defaults it to true. Detect that case and inherit the defaults for any
+  // missing keys so returning drafts still land with the box checked.
   useEffect(() => {
     let mounted = true;
     (async () => {
       const draft = await loadDraft<Step1Values>(1);
-      if (mounted && draft) reset(draft);
+      if (mounted && draft) {
+        const backfilledOwner = draft.owner ?? {
+          // Backfill Owner from the old Primary Contact if we have nothing
+          // else — that's usually the same person.
+          name: draft.primaryContact?.name ?? '',
+          email: draft.primaryContact?.email ?? '',
+          phone: draft.primaryContact?.phone ?? '',
+        };
+
+        // Self-heal rule: if the persisted `primaryContactSameAsOwner` flag is
+        // false but the Owner and Primary Contact actually match, restore
+        // the toggle to true. This recovers from earlier drafts where the
+        // toggle was set to false during an intermediate build that didn't
+        // default-check the box.
+        const pc = draft.primaryContact ?? { name: '', email: '', phone: '' };
+        const matches =
+          !!backfilledOwner.name &&
+          backfilledOwner.name === pc.name &&
+          backfilledOwner.email === pc.email &&
+          backfilledOwner.phone === pc.phone;
+
+        const persistedFlag = draft.primaryContactSameAsOwner;
+        const resolvedFlag =
+          typeof persistedFlag === 'boolean'
+            ? persistedFlag || matches // false + matching data → heal to true
+            : true;
+
+        const migrated: Step1Values = {
+          ...step1Defaults,
+          ...draft,
+          owner: backfilledOwner,
+          primaryContactSameAsOwner: resolvedFlag,
+          additionalContacts: draft.additionalContacts ?? [],
+        };
+        reset(migrated);
+      }
       setDraftLoaded(true);
     })();
     return () => { mounted = false; };
@@ -141,13 +227,7 @@ export default function Step1Profile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftLoaded, ctx.data]);
 
-  // Autosave after 1.5s of no changes. RHF's watch() calls the subscriber on
-  // every change but does not itself debounce, so we track one shared timer
-  // and reset it on each keystroke. Without this the previous implementation
-  // never actually debounced (the returned cleanup was never invoked by RHF)
-  // and, more importantly, each field change fired an independent save with
-  // stale values — the practical effect users hit was "my Owner edits didn't
-  // persist on refresh" because the last save often lost the race.
+  // Autosave after 1.5s of no changes. See comment in previous version.
   useEffect(() => {
     if (!draftLoaded) return;
     let handle: ReturnType<typeof setTimeout> | null = null;
@@ -165,8 +245,6 @@ export default function Step1Profile() {
 
   const toggleEdit = (key: EditKey, on: boolean) => {
     setEditing((prev) => ({ ...prev, [key]: on }));
-    // When the user opens a flagged card to fix it, drop the invalid state on
-    // that card so the red border doesn't linger while they're typing.
     if (on && invalidCards.has(key)) {
       setInvalidCards((prev) => {
         const next = new Set(prev);
@@ -199,11 +277,8 @@ export default function Step1Profile() {
     const invalid = invalidCardsFromErrors(errors);
     setInvalidCards(invalid);
     toast.error(buildInvalidToast(invalid));
-    // Scroll the first invalid card into view so the user actually sees it.
     const first = Array.from(invalid)[0];
     if (first) {
-      // Wait a tick for the invalid class to be applied so the browser
-      // scrolls to the freshly-highlighted card.
       requestAnimationFrame(() => {
         const el = document.getElementById(`card-${first}`);
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -248,10 +323,11 @@ export default function Step1Profile() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
                 </svg>
-                Pulled from Salesforce just now
+                <span>Pulled from Salesforce just now.</span>
               </div>
             )}
-            {ctx.data?.sf_warning && (
+
+            {ctx.error && (
               <div className="review-banner review-banner--warn" role="alert">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" />
@@ -266,7 +342,8 @@ export default function Step1Profile() {
               <BusinessCard editing={editing.business} setEditing={(v) => toggleEdit('business', v)} onFile={provenance.business} invalid={invalidCards.has('business')} />
               <AddressCard editing={editing.address} setEditing={(v) => toggleEdit('address', v)} onFile={provenance.address} invalid={invalidCards.has('address')} />
               <HoursCard editing={editing.hours} setEditing={(v) => toggleEdit('hours', v)} invalid={invalidCards.has('hours')} />
-              <OwnerCard editing={editing.owner} setEditing={(v) => toggleEdit('owner', v)} onFile={provenance.owner} invalid={invalidCards.has('owner')} />
+              <PrimaryContactCard editing={editing.primary} setEditing={(v) => toggleEdit('primary', v)} onFile={provenance.primary} invalid={invalidCards.has('primary')} />
+              <AdditionalContactsCard editing={editing.additional} setEditing={(v) => toggleEdit('additional', v)} invalid={invalidCards.has('additional')} />
               <ManagerCard editing={editing.manager} setEditing={(v) => toggleEdit('manager', v)} invalid={invalidCards.has('manager')} />
             </div>
           </div>
@@ -285,24 +362,17 @@ function mergePrefill(current: Step1Values, ctx: OnboardingContext): Step1Values
   const contact = ctx.prefill?.contact ?? null;
   const acctName = account?.Name ?? ctx.token.account_name ?? '';
 
-  // State is special: the RHF default is 'PA' (schema requires a valid enum
-  // value, so we can't cleanly default to ''). That means the usual
-  // `current || sf` pattern short-circuits and SF's real state never wins on
-  // a fresh session — a New-Jersey customer would see "PA" until they
-  // manually corrected it.
-  //
-  // Previously we only preferred SF when `ctx.onboarding == null`, but the
-  // hq-mint-portal-token flow provisions the onboardings row up front so
-  // admin-opened portals were ALWAYS treated as "started" and defaulted to
-  // the RHF default 'PA'. The portal then wrote 'PA' back to SF on Step 1
-  // submit, clobbering the real BillingState.
-  //
-  // New rule: only trust `current.state` as user intent if Step 1 has
-  // actually been confirmed at least once. Before that, always prefer SF.
   const step1Confirmed = (ctx.onboarding?.current_step ?? 1) > 1;
   const sfState = account?.BillingState ? normalizeState(account.BillingState) : null;
   const resolvedState =
     !step1Confirmed && sfState ? sfState : current.state;
+
+  // SF contact → owner (primary source). If Primary Contact already differs
+  // from Owner (i.e. same-as-owner toggle was cleared), we don't overwrite it.
+  const ownerName = current.owner.name || joinName(contact?.FirstName, contact?.LastName);
+  const ownerEmail = current.owner.email || (contact?.Email ?? ctx.token.recipient_email ?? '');
+  const ownerPhone = current.owner.phone ||
+    (contact?.MobilePhone ?? contact?.Phone ?? account?.Phone ?? '');
 
   const next: Step1Values = {
     ...current,
@@ -312,12 +382,18 @@ function mergePrefill(current: Step1Values, ctx: OnboardingContext): Step1Values
     city: current.city || (account?.BillingCity ?? ''),
     state: resolvedState as Step1Values['state'],
     zip: current.zip || (account?.BillingPostalCode ?? ''),
-    primaryContact: {
-      name: current.primaryContact.name || joinName(contact?.FirstName, contact?.LastName),
-      email: current.primaryContact.email || (contact?.Email ?? ctx.token.recipient_email ?? ''),
-      phone: current.primaryContact.phone ||
-        (contact?.MobilePhone ?? contact?.Phone ?? account?.Phone ?? ''),
-    },
+    owner: { name: ownerName, email: ownerEmail, phone: ownerPhone },
+    // primaryContact mirrors owner when the toggle is on. If the toggle was
+    // toggled off in a prior draft, current.primaryContact.* will already
+    // be populated and we keep it.
+    primaryContact: current.primaryContactSameAsOwner
+      ? { name: ownerName, email: ownerEmail, phone: ownerPhone }
+      : {
+          name: current.primaryContact.name || joinName(contact?.FirstName, contact?.LastName),
+          email: current.primaryContact.email || (contact?.Email ?? ctx.token.recipient_email ?? ''),
+          phone: current.primaryContact.phone ||
+            (contact?.MobilePhone ?? contact?.Phone ?? account?.Phone ?? ''),
+        },
   };
   // Cheap shallow change check
   const changed =
@@ -327,6 +403,9 @@ function mergePrefill(current: Step1Values, ctx: OnboardingContext): Step1Values
     next.city !== current.city ||
     next.state !== current.state ||
     next.zip !== current.zip ||
+    next.owner.name !== current.owner.name ||
+    next.owner.email !== current.owner.email ||
+    next.owner.phone !== current.owner.phone ||
     next.primaryContact.name !== current.primaryContact.name ||
     next.primaryContact.email !== current.primaryContact.email ||
     next.primaryContact.phone !== current.primaryContact.phone;
@@ -340,7 +419,6 @@ function joinName(first: string | null | undefined, last: string | null | undefi
 function normalizeState(raw: string | null | undefined): string {
   if (!raw) return 'PA';
   const upper = raw.trim().toUpperCase();
-  // SF can return either abbreviation or full name. Cover the common cases.
   const fullToAbbr: Record<string, string> = {
     PENNSYLVANIA: 'PA', 'NEW JERSEY': 'NJ', DELAWARE: 'DE', 'NEW YORK': 'NY',
     MARYLAND: 'MD', VIRGINIA: 'VA', OHIO: 'OH',
@@ -373,7 +451,7 @@ function ReviewCard({
   icon: React.ReactNode;
   title: string;
   badge: string;
-  badgeVariant?: 'on-file' | 'warn' | 'optional';
+  badgeVariant?: 'on-file' | 'warn' | 'optional' | 'required';
   editLabel?: string;
   editing: boolean;
   setEditing: (v: boolean) => void;
@@ -386,6 +464,7 @@ function ReviewCard({
   const badgeClass =
     invalid ? 'review-card__badge review-card__badge--invalid' :
     badgeVariant === 'warn' ? 'review-card__badge review-card__badge--warn' :
+    badgeVariant === 'required' ? 'review-card__badge review-card__badge--warn' :
     badgeVariant === 'optional' ? 'review-card__badge review-card__badge--neutral' :
     'review-card__badge';
   const displayBadge = invalid ? 'Needs your attention' : badge;
@@ -439,38 +518,83 @@ function ReviewCard({
 }
 
 /* -------------------------------------------------------------------------
- * Business card
+ * Business card — now owns Owner info (Amanda 2026-07-21)
  * ----------------------------------------------------------------------- */
 
 function BusinessCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean; invalid?: boolean }) {
-  const { register, watch } = useFormContext<Step1Values>();
+  const { register, watch, formState: { errors } } = useFormContext<Step1Values>();
   const legal = watch('legalName');
   const dba = watch('storefrontName');
+  const owner = watch('owner');
+  const ownerInitials = (owner?.name || '').split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '—';
   return (
     <ReviewCard
       id="card-business"
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" /></svg>}
-      title="Business"
+      title="Business & Owner"
       badge={props.onFile ? 'On file' : 'Add details'}
       badgeVariant={props.onFile ? 'on-file' : 'optional'}
       editing={props.editing}
       setEditing={props.setEditing}
       invalid={props.invalid}
       view={
-        <dl className="kv">
-          <dt>Legal entity</dt><dd>{legal || <span className="muted">—</span>}</dd>
-          <dt>DBA / storefront</dt><dd>{dba || <span className="muted">—</span>}</dd>
-        </dl>
+        <>
+          <dl className="kv">
+            <dt>Legal entity</dt><dd>{legal || <span className="muted">—</span>}</dd>
+            <dt>DBA / storefront</dt><dd>{dba || <span className="muted">—</span>}</dd>
+          </dl>
+          <div style={{ height: 12 }} />
+          <div className="person">
+            <div className="avatar">{ownerInitials}</div>
+            <div>
+              <div className="person__name">{owner?.name || <span className="muted">—</span>}</div>
+              <div className="person__role">Owner</div>
+            </div>
+          </div>
+          <div className="contact-lines">
+            <div>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><path d="M22 6l-10 7L2 6" /></svg>
+              {owner?.email || <span className="muted">no owner email on file</span>}
+            </div>
+            <div>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+              {owner?.phone || <span className="muted">no owner phone on file</span>}
+            </div>
+          </div>
+        </>
       }
       edit={
         <div className="review-form-grid">
           <div className="field full">
             <label className="field-label">Legal entity</label>
             <input type="text" {...register('legalName')} />
+            {errors.legalName && <span className="field-error">{errors.legalName.message as string}</span>}
           </div>
           <div className="field full">
             <label className="field-label">DBA / storefront</label>
             <input type="text" {...register('storefrontName')} />
+            {errors.storefrontName && <span className="field-error">{errors.storefrontName.message as string}</span>}
+          </div>
+          <div className="field full">
+            <label className="field-label" style={{ marginTop: 8 }}>
+              Owner name <span className="required-star" aria-hidden>*</span>
+            </label>
+            <input type="text" {...register('owner.name')} autoComplete="name" placeholder="Legal owner of the store" />
+            {errors.owner?.name && <span className="field-error">{errors.owner.name.message as string}</span>}
+          </div>
+          <div className="field full">
+            <label className="field-label">
+              Owner email <span className="required-star" aria-hidden>*</span>
+            </label>
+            <input type="email" {...register('owner.email')} autoComplete="email" placeholder="owner@example.com" />
+            {errors.owner?.email && <span className="field-error">{errors.owner.email.message as string}</span>}
+          </div>
+          <div className="field full">
+            <label className="field-label">
+              Owner mobile phone <span className="required-star" aria-hidden>*</span>
+            </label>
+            <input type="tel" {...register('owner.phone')} autoComplete="tel" placeholder="(215) 555-0123" />
+            {errors.owner?.phone && <span className="field-error">{errors.owner.phone.message as string}</span>}
           </div>
         </div>
       }
@@ -540,7 +664,7 @@ function AddressCard(props: { editing: boolean; setEditing: (v: boolean) => void
 }
 
 /* -------------------------------------------------------------------------
- * Hours card (spans 2 columns)
+ * Hours card (spans 2 columns) — now labelled Required per Amanda
  * ----------------------------------------------------------------------- */
 
 function HoursCard(props: { editing: boolean; setEditing: (v: boolean) => void; invalid?: boolean }) {
@@ -571,9 +695,9 @@ function HoursCard(props: { editing: boolean; setEditing: (v: boolean) => void; 
       id="card-hours"
       span2
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>}
-      title="Operating hours"
-      badge="Default · please verify"
-      badgeVariant="warn"
+      title="Operating days & hours"
+      badge="Required · please verify"
+      badgeVariant="required"
       editing={props.editing}
       setEditing={props.setEditing}
       invalid={props.invalid}
@@ -679,23 +803,24 @@ function buildHoursSummary(hours: Step1Values['hours']) {
 }
 
 /* -------------------------------------------------------------------------
- * Owner / Primary contact card
+ * Primary Contact card
  * ----------------------------------------------------------------------- */
 
-function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean; invalid?: boolean }) {
-  const { register, watch, formState: { errors } } = useFormContext<Step1Values>();
+function PrimaryContactCard(props: { editing: boolean; setEditing: (v: boolean) => void; onFile: boolean; invalid?: boolean }) {
+  const { register, watch, setValue, formState: { errors } } = useFormContext<Step1Values>();
   const name = watch('primaryContact.name');
   const email = watch('primaryContact.email');
   const phone = watch('primaryContact.phone');
+  const sameAsOwner = watch('primaryContactSameAsOwner');
   const initials = (name || '').split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '—';
 
   return (
     <ReviewCard
-      id="card-owner"
+      id="card-primary"
       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>}
-      title="Owner / Primary contact"
-      badge={props.onFile ? 'On file' : 'Add details'}
-      badgeVariant={props.onFile ? 'on-file' : 'optional'}
+      title="Business Card"
+      badge={sameAsOwner ? 'Same as owner' : (props.onFile ? 'On file' : 'Add details')}
+      badgeVariant={sameAsOwner ? 'on-file' : (props.onFile ? 'on-file' : 'optional')}
       editing={props.editing}
       setEditing={props.setEditing}
       invalid={props.invalid}
@@ -705,7 +830,7 @@ function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; 
             <div className="avatar">{initials}</div>
             <div>
               <div className="person__name">{name || <span className="muted">—</span>}</div>
-              <div className="person__role">Owner</div>
+              <div className="person__role">Business card</div>
             </div>
           </div>
           <div className="contact-lines">
@@ -721,21 +846,151 @@ function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; 
         </>
       }
       edit={
-        <div className="review-form-grid">
-          <div className="field full">
-            <label className="field-label">Full name</label>
-            <input type="text" {...register('primaryContact.name')} autoComplete="name" />
-            {errors.primaryContact?.name && <span className="field-error">{errors.primaryContact.name.message}</span>}
+        <>
+          <label className="toggle-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <input
+              type="checkbox"
+              checked={!!sameAsOwner}
+              onChange={(e) => setValue('primaryContactSameAsOwner', e.target.checked, { shouldDirty: true })}
+            />
+            <span>Same as owner (auto-fills from the Owner listed above)</span>
+          </label>
+          <div className="review-form-grid">
+            <div className="field full">
+              <label className="field-label">Full name</label>
+              <input
+                type="text"
+                {...register('primaryContact.name')}
+                autoComplete="name"
+                disabled={!!sameAsOwner}
+              />
+              {errors.primaryContact?.name && <span className="field-error">{errors.primaryContact.name.message as string}</span>}
+            </div>
+            <div className="field full">
+              <label className="field-label">Email</label>
+              <input
+                type="email"
+                {...register('primaryContact.email')}
+                autoComplete="email"
+                disabled={!!sameAsOwner}
+              />
+              {errors.primaryContact?.email && <span className="field-error">{errors.primaryContact.email.message as string}</span>}
+            </div>
+            <div className="field full">
+              <label className="field-label">Mobile phone</label>
+              <input
+                type="tel"
+                {...register('primaryContact.phone')}
+                autoComplete="tel"
+                placeholder="(215) 555-0123"
+                disabled={!!sameAsOwner}
+              />
+              {errors.primaryContact?.phone && <span className="field-error">{errors.primaryContact.phone.message as string}</span>}
+            </div>
           </div>
-          <div className="field full">
-            <label className="field-label">Email</label>
-            <input type="email" {...register('primaryContact.email')} autoComplete="email" />
-            {errors.primaryContact?.email && <span className="field-error">{errors.primaryContact.email.message}</span>}
+        </>
+      }
+    />
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * Additional Contacts card (NEW 2026-07-21 per Amanda)
+ * Manager / Assistant Manager / General Manager / Staff — all optional.
+ * ----------------------------------------------------------------------- */
+
+function AdditionalContactsCard(props: { editing: boolean; setEditing: (v: boolean) => void; invalid?: boolean }) {
+  const { register, control, watch, formState: { errors } } = useFormContext<Step1Values>();
+  const { fields, append, remove } = useFieldArray({ control, name: 'additionalContacts' });
+  const contacts = watch('additionalContacts') ?? [];
+  const hasAny = contacts.length > 0;
+
+  return (
+    <ReviewCard
+      id="card-additional"
+      span2
+      icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
+      title="Additional contacts"
+      badge="Optional"
+      badgeVariant="optional"
+      editLabel={hasAny ? 'Edit' : 'Add'}
+      editing={props.editing}
+      setEditing={props.setEditing}
+      invalid={props.invalid}
+      view={
+        hasAny ? (
+          <div style={{ display: 'grid', gap: 12 }}>
+            {contacts.map((c, i) => {
+              const initials = (c.name || '').split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '—';
+              return (
+                <div key={i} className="person" style={{ alignItems: 'center' }}>
+                  <div className="avatar">{initials}</div>
+                  <div style={{ flex: 1 }}>
+                    <div className="person__name">{c.name || <span className="muted">—</span>}</div>
+                    <div className="person__role">{ROLE_LABEL[c.role as AdditionalContactRole] ?? '—'}</div>
+                    <div className="contact-lines" style={{ marginTop: 4 }}>
+                      {c.email && <div>{c.email}</div>}
+                      {c.phone && <div>{c.phone}</div>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="field full">
-            <label className="field-label">Mobile phone</label>
-            <input type="tel" {...register('primaryContact.phone')} autoComplete="tel" placeholder="(215) 555-0123" />
-            {errors.primaryContact?.phone && <span className="field-error">{errors.primaryContact.phone.message}</span>}
+        ) : (
+          <div className="empty-state">
+            No additional contacts yet.{' '}
+            <strong>Optional</strong> — add a Manager, Assistant Manager, General Manager, or other staff we should be able to reach.
+          </div>
+        )
+      }
+      edit={
+        <div style={{ display: 'grid', gap: 12 }}>
+          {fields.map((f, i) => (
+            <div key={f.id} className="review-form-grid" style={{ border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 12 }}>
+              <div className="field">
+                <label className="field-label">Role</label>
+                <select {...register(`additionalContacts.${i}.role` as const)}>
+                  <option value="">Select role…</option>
+                  {ADDITIONAL_CONTACT_ROLES.map((r) => (
+                    <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                  ))}
+                </select>
+                {errors.additionalContacts?.[i]?.role && (
+                  <span className="field-error">{errors.additionalContacts[i]?.role?.message as string}</span>
+                )}
+              </div>
+              <div className="field">
+                <label className="field-label">Full name</label>
+                <input type="text" {...register(`additionalContacts.${i}.name` as const)} />
+                {errors.additionalContacts?.[i]?.name && (
+                  <span className="field-error">{errors.additionalContacts[i]?.name?.message as string}</span>
+                )}
+              </div>
+              <div className="field">
+                <label className="field-label">Email (optional)</label>
+                <input type="email" {...register(`additionalContacts.${i}.email` as const)} />
+                {errors.additionalContacts?.[i]?.email && (
+                  <span className="field-error">{errors.additionalContacts[i]?.email?.message as string}</span>
+                )}
+              </div>
+              <div className="field">
+                <label className="field-label">Mobile phone (optional)</label>
+                <input type="tel" {...register(`additionalContacts.${i}.phone` as const)} placeholder="(215) 555-0000" />
+              </div>
+              <div className="field full" style={{ textAlign: 'right' }}>
+                <button type="button" className="btn btn-ghost" onClick={() => remove(i)}>Remove</button>
+              </div>
+            </div>
+          ))}
+          <div>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => append({ name: '', role: 'manager' as AdditionalContactRole, email: '', phone: '' })}
+            >
+              + Add contact
+            </button>
           </div>
         </div>
       }
@@ -744,7 +999,7 @@ function OwnerCard(props: { editing: boolean; setEditing: (v: boolean) => void; 
 }
 
 /* -------------------------------------------------------------------------
- * Back-of-house manager card (optional)
+ * Back-of-house manager card (legacy, optional)
  * ----------------------------------------------------------------------- */
 
 function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void; invalid?: boolean }) {
@@ -808,7 +1063,7 @@ function ManagerCard(props: { editing: boolean; setEditing: (v: boolean) => void
           <div className="field full">
             <label className="field-label">Email</label>
             <input type="email" {...register('bohManager.email')} placeholder="manager@example.com" />
-            {errors.bohManager?.email && <span className="field-error">{errors.bohManager.email.message}</span>}
+            {errors.bohManager?.email && <span className="field-error">{errors.bohManager.email.message as string}</span>}
           </div>
           <div className="field full">
             <label className="field-label">Mobile phone</label>
