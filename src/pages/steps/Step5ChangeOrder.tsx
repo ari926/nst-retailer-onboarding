@@ -294,7 +294,10 @@ export default function Step5ChangeOrder() {
   const dimes = Number(watch('units.dimes')) || 0;
   const nickels = Number(watch('units.nickels')) || 0;
   const arrivalDate = watch('arrivalDate');
-  const units = { ones, fives, tens, twenties, fifties, hundreds, quarters, dimes, nickels };
+  // Force coin to 0 in the totals — the UI intentionally only collects
+  // currency denominations, but old drafts / demo seed may set coin fields.
+  const units = { ones, fives, tens, twenties, fifties, hundreds, quarters: 0, dimes: 0, nickels: 0 };
+  void quarters; void dimes; void nickels;
   const totals = sumChangeOrderUsd(units);
 
   const onSubmit = async (values: Step5Values) => {

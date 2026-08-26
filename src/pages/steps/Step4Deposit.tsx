@@ -590,10 +590,13 @@ export default function Step4Deposit() {
                     </div>
                     <span className="field-hint">Auto-calculated · next business day</span>
                   </div>
-                  <div className="field">
-                    <label htmlFor="comments" className="field-label">Comments</label>
-                    <textarea id="comments" className="textarea" rows={2} {...register('comments')} />
-                  </div>
+                </div>
+
+                {/* Comments spans full width — a squeezed textarea wraps text
+                    one-word-per-line inside the 3-col grid. */}
+                <div className="field">
+                  <label htmlFor="comments" className="field-label">Comments</label>
+                  <textarea id="comments" className="textarea" rows={2} {...register('comments')} />
                 </div>
               </div>
             </div>
