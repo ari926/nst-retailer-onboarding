@@ -4,7 +4,7 @@ import { FormProvider, useForm, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { ChevronDown, ChevronUp, Building2, FileText, History, ClipboardList } from 'lucide-react';
+import { ChevronDown, ChevronUp, Building2, FileText, History, ClipboardList, PackageOpen, ShoppingCart, Search, Wallet } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
@@ -414,7 +414,7 @@ export default function Step4Deposit() {
             <>
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn-link"
                 onClick={() => reset(step4Defaults)}
                 disabled={submitting}
               >
@@ -433,25 +433,51 @@ export default function Step4Deposit() {
         >
           <SimulationBanner customer={storeInfo.customer} />
 
-          {/* 2026-07-26 (Amanda + Doug): CIT-style 3-column shell.
-              Left rail = section nav; center = form + history; right = Reports. */}
+          {/* 2026-08-26 (Amanda screenshot 6): CIT-portal 2-column shell that
+              matches the real Bank deposits page. Left rail lists the same
+              nav groups as Step 5 (Deposits / Change orders / Reports).
+              Body has a top bar, green section title, 3-column form. */}
           <div className="cit-shell">
             <nav className="cit-sidenav" aria-label="CIT sections">
               <div className="cit-sidenav__group">
+                <div className="cit-sidenav__section">Deposits</div>
                 <button type="button" className="cit-sidenav__item cit-sidenav__item--active">
                   <FileText size={14} /> Bank deposits
                 </button>
                 <button type="button" className="cit-sidenav__item" disabled>
-                  <History size={14} /> Deposit history
+                  <PackageOpen size={14} /> Search deposits
+                </button>
+                <div className="cit-sidenav__section">Change orders</div>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ShoppingCart size={14} /> Create change order
                 </button>
                 <button type="button" className="cit-sidenav__item" disabled>
-                  <ClipboardList size={14} /> Reports
+                  <Search size={14} /> Search change orders
+                </button>
+                <div className="cit-sidenav__section">Reports</div>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ClipboardList size={14} /> Deposit summary report
+                </button>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ClipboardList size={14} /> Order summary report
+                </button>
+                <button type="button" className="cit-sidenav__item" disabled>
+                  <ClipboardList size={14} /> Customer profiles report
                 </button>
               </div>
               <p className="cit-sidenav__hint">Training view — only Bank deposits is active during onboarding.</p>
             </nav>
 
             <div className="cit-shell__body stack stack-md">
+              <div className="cit-topbar">
+                <span className="cit-topbar__customer">Customer: <strong>{storeInfo.customer || 'Sample Retailer'}</strong></span>
+                <span className="cit-topbar__user">cash@talaria.com ▾</span>
+              </div>
+              <div className="cit-section-title">
+                <span className="cit-section-title__icon"><Wallet size={20} /></span>
+                <span className="cit-section-title__text">Bank deposits</span>
+                <a href="#" className="cit-section-title__close" onClick={(e) => e.preventDefault()}>Close</a>
+              </div>
           <div className="cit-layout">
             <StoreInfoPanel info={storeInfo} />
 
@@ -459,7 +485,12 @@ export default function Step4Deposit() {
               <div className="step-card stack stack-md">
                 <h3 className="section-heading">Create new deposit</h3>
 
-                <div className="grid-2">
+                {/* 2026-08-26 (Amanda screenshot 6): production form uses a
+                    3-column grid — row 1 bag/preparedBy/totalCurrency,
+                    row 2 businessDate/verifiedBy/totalCoin,
+                    row 3 registerId/departureDate/expectedCreditDate,
+                    row 4 shift/expectedCreditDate stays paired. */}
+                <div className="grid-3-form">
                   <div className="field">
                     <label htmlFor="bagNumber" className="field-label field-required">
                       Deposit bag number
@@ -473,9 +504,19 @@ export default function Step4Deposit() {
                     <label htmlFor="preparedBy" className="field-label">Prepared by</label>
                     <input id="preparedBy" className="input" {...register('preparedBy')} />
                   </div>
-                </div>
+                  <div className="field">
+                    <label htmlFor="totalCurrency" className="field-label">Total currency ($)</label>
+                    <input
+                      id="totalCurrency"
+                      className="input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('totalCurrency')}
+                    />
+                    <CurrencyBreakdown />
+                  </div>
 
-                <div className="grid-2">
                   <div className="field">
                     <label htmlFor="businessDate" className="field-label field-required">
                       Business date
@@ -489,9 +530,19 @@ export default function Step4Deposit() {
                     <label htmlFor="verifiedBy" className="field-label">Verified by</label>
                     <input id="verifiedBy" className="input" {...register('verifiedBy')} />
                   </div>
-                </div>
+                  <div className="field">
+                    <label htmlFor="totalCoin" className="field-label">Total coin ($)</label>
+                    <input
+                      id="totalCoin"
+                      className="input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('totalCoin')}
+                    />
+                    <CoinBreakdown />
+                  </div>
 
-                <div className="grid-2">
                   <div className="field">
                     <label htmlFor="registerId" className="field-label">Register id</label>
                     <input id="registerId" className="input" {...register('registerId')} />
@@ -516,9 +567,13 @@ export default function Step4Deposit() {
                       This store is scheduled for {WEEKDAY_LABEL[serviceWeekday]} service. Departure must fall on a {WEEKDAY_LABEL[serviceWeekday]}.
                     </span>
                   </div>
-                </div>
+                  <div className="field">
+                    <label className="field-label">USD Total</label>
+                    <div className="readonly-value" aria-live="polite">
+                      <strong>${totalDeposit.toFixed(2)}</strong>
+                    </div>
+                  </div>
 
-                <div className="grid-2">
                   <div className="field">
                     <label htmlFor="shiftNumber" className="field-label">Shift number</label>
                     <select id="shiftNumber" className="input" {...register('shiftNumber')}>
@@ -535,49 +590,10 @@ export default function Step4Deposit() {
                     </div>
                     <span className="field-hint">Auto-calculated · next business day</span>
                   </div>
-                </div>
-              </div>
-
-              <div className="step-card stack stack-md">
-                <h3 className="section-heading">Deposit amount</h3>
-
-                <div className="grid-2">
                   <div className="field">
-                    <label htmlFor="totalCurrency" className="field-label">Total currency ($)</label>
-                    <input
-                      id="totalCurrency"
-                      className="input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...register('totalCurrency')}
-                    />
-                    <CurrencyBreakdown />
+                    <label htmlFor="comments" className="field-label">Comments</label>
+                    <textarea id="comments" className="textarea" rows={2} {...register('comments')} />
                   </div>
-                  <div className="field">
-                    <label htmlFor="totalCoin" className="field-label">Total coin ($)</label>
-                    <input
-                      id="totalCoin"
-                      className="input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...register('totalCoin')}
-                    />
-                    <CoinBreakdown />
-                  </div>
-                </div>
-
-                <div className="deposit-total">
-                  <span>Total deposit</span>
-                  <strong>${totalDeposit.toFixed(2)}</strong>
-                </div>
-              </div>
-
-              <div className="step-card">
-                <div className="field">
-                  <label htmlFor="comments" className="field-label">Comments</label>
-                  <textarea id="comments" className="textarea" rows={2} {...register('comments')} />
                 </div>
               </div>
             </div>
@@ -676,8 +692,8 @@ export default function Step4Deposit() {
               <div className="cit-history__actions">
                 <button type="button" className="btn-ghost btn-ghost--sm" disabled>+ Create deposit</button>
                 <button type="button" className="btn-ghost btn-ghost--sm" disabled>× Cancel selected deposit</button>
-                <button type="button" className="btn-ghost btn-ghost--sm" disabled>🗄 Reprint selected deposit</button>
-                <button type="button" className="btn-ghost btn-ghost--sm" disabled>🔍 View selected deposit</button>
+                <button type="button" className="btn-ghost btn-ghost--sm" disabled>Reprint selected deposit</button>
+                <button type="button" className="btn-ghost btn-ghost--sm" disabled>View selected deposit</button>
               </div>
             </section>
 

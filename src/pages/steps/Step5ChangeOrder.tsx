@@ -4,7 +4,7 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Building2, Info, PackageOpen, Search, ClipboardList, ShoppingCart } from 'lucide-react';
+import { PackageOpen, Search, ClipboardList, ShoppingCart } from 'lucide-react';
 
 import { StepShell } from '../../components/ui/StepShell';
 import { useOnboardingStore } from '../../stores/onboardingStore';
@@ -24,9 +24,18 @@ import {
 /**
  * Step 5 — Sample change order (Cash Services layout).
  *
- * Per Amanda 2026-07-21: mirror the Cash Services "Create change order"
- * screen so retailers train on the same UI they'll use going live. Uses
- * NST portal shell + Cash Services info architecture.
+ * 2026-08-26 (Amanda screenshot 5 + 3): mirror the real production Cash
+ * Services "Create change order" screen more closely.
+ *   - Header: Customer id / Name / Location in one row (top). Cutoff time and
+ *     Arrival date centered below.
+ *   - Body: LEFT column shows "Click name below to select product" hint and a
+ *     small vertical Total USD summary panel (Currency / Coin / Total).
+ *   - Body: RIGHT column shows a compact denomination table with columns
+ *     Currency, Amount ($), Multiple of. NO Subtotal column. NO coin rows
+ *     (production Cash Services form only accepts $1/$5/$10/$20/$50/$100).
+ *   - Footer: Confirm (blue) + Cancel (text link).
+ *   - Confirm click opens the "Please confirm that you would like to place an
+ *     order..." modal with Yes/No. Only Yes submits.
  */
 
 interface HeaderInfo {
@@ -34,6 +43,12 @@ interface HeaderInfo {
   name: string;
   location: string;
 }
+
+// Denominations shown in the change-order form. Coin rows are intentionally
+// excluded to match the real production Cash Services form (Amanda 2026-08-26).
+const CHANGE_ORDER_CURRENCY_DENOMS = CHANGE_ORDER_DENOMS.filter(
+  (d) => !['quarters', 'dimes', 'nickels'].includes(d.key),
+);
 
 function SimulationBanner({ customer }: { customer: string }) {
   return (
@@ -51,6 +66,28 @@ function SimulationBanner({ customer }: { customer: string }) {
   );
 }
 
+/**
+ * Format a cutoff timestamp like the reference screenshot:
+ *   "Aug 31, 2026 01:00 PM CDT"
+ * We pick the Monday-of-week that gates the currently-selected arrival date.
+ */
+function formatCutoffTimestamp(arrivalIso: string): string {
+  if (!arrivalIso) return '—';
+  const [y, m, d] = arrivalIso.split('-').map(Number);
+  const arrival = new Date(y, m - 1, d);
+  // Monday of the same week (arrival is a Wed, so back up 2 days).
+  const monday = new Date(arrival);
+  monday.setDate(arrival.getDate() - 2);
+  monday.setHours(13, 0, 0, 0);
+  const datePart = monday.toLocaleDateString('en-US', {
+    month: 'short', day: '2-digit', year: 'numeric',
+  });
+  const timePart = monday.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', hour12: true, timeZoneName: 'short',
+  });
+  return `${datePart} ${timePart}`;
+}
+
 function HeaderBar({
   info,
   arrivalOptions,
@@ -65,52 +102,83 @@ function HeaderBar({
   arrivalError?: string;
 }) {
   return (
-    <div className="change-order-header">
-      <div className="change-order-header__row">
-        <div className="change-order-header__cell">
-          <span className="change-order-header__label">Customer id</span>
-          <span className="change-order-header__value mono">{info.customerId || '—'}</span>
+    <div className="co-header">
+      <div className="co-header__ids">
+        <div className="co-header__cell">
+          <span className="co-header__label">Customer id</span>
+          <input className="input co-header__input mono" value={info.customerId || ''} readOnly />
         </div>
-        <div className="change-order-header__cell">
-          <span className="change-order-header__label">Name</span>
-          <span className="change-order-header__value">{info.name || '—'}</span>
+        <div className="co-header__cell">
+          <span className="co-header__label">Name</span>
+          <input className="input co-header__input" value={info.name || ''} readOnly />
         </div>
-        <div className="change-order-header__cell">
-          <span className="change-order-header__label">Location</span>
-          <span className="change-order-header__value">{info.location || '—'}</span>
+        <div className="co-header__cell">
+          <span className="co-header__label">Location</span>
+          <input className="input co-header__input" value={info.location || ''} readOnly />
         </div>
-        <div className="change-order-header__cell">
-          <span className="change-order-header__label">Cutoff time</span>
-          <span className="change-order-header__value">Mon · {SAMPLE_CUTOFF_TIME}</span>
-        </div>
-        <div className="change-order-header__cell">
-          <label htmlFor="arrivalDate" className="change-order-header__label">
-            Arrival date
-          </label>
-          <select
-            id="arrivalDate"
-            className="input change-order-header__select"
-            value={arrivalDate}
-            onChange={(e) => onArrivalChange(e.target.value)}
-          >
-            <option value="">Select arrival</option>
-            {arrivalOptions.map((iso) => (
-              <option key={iso} value={iso}>{formatArrivalLabel(iso)}</option>
-            ))}
-          </select>
-          {arrivalError && <span className="field-error">{arrivalError}</span>}
-        </div>
+      </div>
+      <div className="co-header__cutoff">
+        <span className="co-header__label">Cutoff time</span>
+        <input className="input co-header__input" value={formatCutoffTimestamp(arrivalDate)} readOnly />
+      </div>
+      <div className="co-header__arrival">
+        <label htmlFor="arrivalDate" className="co-header__label">
+          Arrival date <span className="co-header__req">•</span>
+        </label>
+        <select
+          id="arrivalDate"
+          className="input co-header__input"
+          value={arrivalDate}
+          onChange={(e) => onArrivalChange(e.target.value)}
+        >
+          <option value="">Select arrival</option>
+          {arrivalOptions.map((iso) => (
+            <option key={iso} value={iso}>{formatArrivalLabel(iso)}</option>
+          ))}
+        </select>
+        {arrivalError && <span className="field-error">{arrivalError}</span>}
       </div>
     </div>
   );
 }
 
-function DenominationUnitsCard() {
-  // Rendered separately so we can useFormContext-free layout — parent form
-  // owns the register calls to keep the file readable.
-  return null;
+function ConfirmModal({
+  open,
+  amount,
+  arrivalIso,
+  onYes,
+  onNo,
+  submitting,
+}: {
+  open: boolean;
+  amount: number;
+  arrivalIso: string;
+  onYes: () => void;
+  onNo: () => void;
+  submitting: boolean;
+}) {
+  if (!open) return null;
+  const amountFmt = `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const arrival = arrivalIso ? formatArrivalLabel(arrivalIso) : '';
+  return (
+    <div className="co-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="co-modal-title">
+      <div className="co-modal">
+        <p id="co-modal-title" className="co-modal__body">
+          Please confirm that you would like to place an order for <strong>{amountFmt}</strong> to arrive on{' '}
+          <strong>{arrival}</strong>. The order total is <strong>{amountFmt}</strong>.
+        </p>
+        <div className="co-modal__actions">
+          <button type="button" className="btn btn-primary" onClick={onYes} disabled={submitting}>
+            {submitting ? <span className="spinner" aria-hidden /> : 'Yes'}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={onNo} disabled={submitting}>
+            No
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
-void DenominationUnitsCard;
 
 export default function Step5ChangeOrder() {
   const { t } = useTranslation();
@@ -122,6 +190,13 @@ export default function Step5ChangeOrder() {
 
   const [submitting, setSubmitting] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  // 2026-08-26 (Amanda screenshot 3): production form asks "Please confirm..."
+  // before actually submitting the change order.
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Which product row is active in the left summary panel. Matches the ref
+  // screenshot where clicking "Currency" highlights the currency section.
+  const [activeProduct, setActiveProduct] = useState<'currency' | 'coin'>('currency');
+  void activeProduct; // kept for future use; coin section is disabled in the ref
 
   const arrivalOptions = useMemo(() => nextArrivalDates(new Date(), 3), []);
 
@@ -159,17 +234,12 @@ export default function Step5ChangeOrder() {
           bills?: Partial<Record<'singles'|'fives'|'tens'|'twenties', number>>;
         };
         if (legacy && (legacy.deliveryDate || legacy.rolls || legacy.bills) && !('units' in draft)) {
-          // Don't reuse legacy deliveryDate (weekday may differ from Wed) — force
-          // retailer to pick a valid Wed. Keep denom counts as best-effort import
-          // but scale rolls to units (1 roll ≈ 0 units — we set to 0 to avoid
-          // over-requesting).
           const b = legacy.bills || {};
           migrated.units = {
             ones: Number(b.singles) || 0,
             fives: Number(b.fives) || 0,
             tens: Number(b.tens) || 0,
             twenties: Number(b.twenties) || 0,
-            // Legacy drafts predate 2026-07-26 change set (no $50/$100 fields).
             fifties: 0,
             hundreds: 0,
             // Coin rolls don't cleanly map to Amanda's unit rules — leave at 0.
@@ -212,21 +282,18 @@ export default function Step5ChangeOrder() {
     };
   }, [watch, draftLoaded]);
 
-  // RHF mutates nested objects in place, so watch('units') returns the same
-  // reference across renders and useMemo doesn't recompute. Watch each key
-  // individually so we get fresh primitive values on every keystroke.
+  // Watch each denom individually (RHF mutates nested objects in place and
+  // watch('units') returns a stable reference across renders).
   const ones = Number(watch('units.ones')) || 0;
   const fives = Number(watch('units.fives')) || 0;
   const tens = Number(watch('units.tens')) || 0;
   const twenties = Number(watch('units.twenties')) || 0;
-  // 2026-07-26 change set: $50 and $100 added per Amanda + Doug.
   const fifties = Number(watch('units.fifties')) || 0;
   const hundreds = Number(watch('units.hundreds')) || 0;
   const quarters = Number(watch('units.quarters')) || 0;
   const dimes = Number(watch('units.dimes')) || 0;
   const nickels = Number(watch('units.nickels')) || 0;
   const arrivalDate = watch('arrivalDate');
-  // Keep a live `units` object for row-level subtotal display.
   const units = { ones, fives, tens, twenties, fifties, hundreds, quarters, dimes, nickels };
   const totals = sumChangeOrderUsd(units);
 
@@ -243,17 +310,28 @@ export default function Step5ChangeOrder() {
       toast.error(msg);
     } finally {
       setSubmitting(false);
+      setConfirmOpen(false);
     }
   };
+
+  // Confirm button (footer) opens the modal; the modal Yes button actually
+  // submits the form via handleSubmit.
+  const openConfirm = handleSubmit(
+    () => setConfirmOpen(true),
+    (errs) => {
+      console.warn('[step submit] validation errors', errs);
+      toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
+    },
+  );
 
   return (
     <FormProvider {...methods}>
       <form
         id="step-form"
-        onSubmit={handleSubmit(onSubmit, (errs) => {
-          console.warn('[step submit] validation errors', errs);
-          toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));
-        })}
+        onSubmit={(e) => {
+          // Never let native submit propagate — Confirm button opens modal instead.
+          e.preventDefault();
+        }}
         noValidate
       >
         <StepShell
@@ -265,21 +343,18 @@ export default function Step5ChangeOrder() {
           hideSubmit
           footerActions={
             <>
-              {/* 2026-07-26 (Amanda + Doug): Cash Services parity — Confirm / Cancel buttons.
-                  Cancel just resets the form; the standard Back button still lives in the
-                  StepShell footer on the left. */}
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn-link"
                 onClick={() => reset({ ...step5Defaults, arrivalDate: arrivalOptions[0] ?? '' })}
                 disabled={submitting}
               >
                 Cancel
               </button>
               <button
-                type="submit"
-                form="step-form"
+                type="button"
                 className="btn btn-primary"
+                onClick={() => void openConfirm()}
                 disabled={submitting}
               >
                 {submitting ? <span className="spinner" aria-hidden /> : 'Confirm'}
@@ -289,8 +364,7 @@ export default function Step5ChangeOrder() {
         >
           <SimulationBanner customer={headerInfo.name} />
 
-          {/* 2026-07-26 (Amanda + Doug): Cash Services portal clone — left rail + main.
-              Only "Create change order" is active during onboarding. */}
+          {/* 2026-07-26 (Amanda + Doug): Cash Services portal clone — left rail + main. */}
           <div className="cash-shell">
             <nav className="cit-sidenav" aria-label="Cash Services sections">
               <div className="cit-sidenav__group">
@@ -320,89 +394,99 @@ export default function Step5ChangeOrder() {
             </nav>
 
             <div className="cash-shell__body stack stack-md">
-          <HeaderBar
-            info={headerInfo}
-            arrivalOptions={arrivalOptions}
-            arrivalDate={arrivalDate}
-            onArrivalChange={(v) => setValue('arrivalDate', v, { shouldValidate: true, shouldDirty: true })}
-            arrivalError={errors.arrivalDate?.message as string | undefined}
-          />
+              <HeaderBar
+                info={headerInfo}
+                arrivalOptions={arrivalOptions}
+                arrivalDate={arrivalDate}
+                onArrivalChange={(v) => setValue('arrivalDate', v, { shouldValidate: true, shouldDirty: true })}
+                arrivalError={errors.arrivalDate?.message as string | undefined}
+              />
 
-          <div className="step-card stack stack-md">
-            <div className="section-heading-row">
-              <h3 className="section-heading">Create change order</h3>
-              <span className="section-hint">
-                <Building2 size={12} />
-                <span>{headerInfo.name}</span>
-              </span>
-            </div>
-
-            <div className="unit-callout">
-              <Info size={14} />
-              <div>
-                <strong>Units are delivered whole — not divided.</strong>{' '}
-                One $20 unit = $2,000. One $50 unit = $5,000. One $100 unit = $10,000. One quarter unit = $500.
-              </div>
-            </div>
-
-            <div className="unit-grid">
-              <div className="unit-grid__head">
-                <span>Currency</span>
-                <span>Amount ($)</span>
-                <span>Multiple of</span>
-                <span>Subtotal</span>
-              </div>
-              {CHANGE_ORDER_DENOMS.map((d) => {
-                const count = Number(units?.[d.key as ChangeOrderDenomKey]) || 0;
-                return (
-                  <div key={d.key} className="unit-grid__row">
-                    <label htmlFor={`unit-${d.key}`} className="unit-grid__label">
-                      {d.label}
-                    </label>
-                    <input
-                      id={`unit-${d.key}`}
-                      className="input"
-                      type="number"
-                      min="0"
-                      step="1"
-                      {...register(`units.${d.key}` as const)}
-                    />
-                    <span className="unit-grid__multiple">${d.unitValue.toLocaleString()} / unit</span>
-                    <span className="unit-grid__subtotal">
-                      ${(count * d.unitValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+              {/* 2026-08-26 (Amanda screenshot 5): compact 2-column form
+                  matching the real Cash Services portal exactly. */}
+              <div className="co-form">
+                <aside className="co-form__summary">
+                  <div className="co-form__hint">Click name below to select product</div>
+                  <div className="co-form__totals">
+                    <div className="co-form__totals-head">
+                      <span>&nbsp;</span>
+                      <span>Total USD</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`co-form__totals-row ${activeProduct === 'currency' ? 'co-form__totals-row--active' : ''}`}
+                      onClick={() => setActiveProduct('currency')}
+                    >
+                      <span>Currency</span>
+                      <span className="co-form__totals-value">
+                        ${totals.currency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="co-form__totals-row co-form__totals-row--disabled"
+                      disabled
+                      aria-disabled="true"
+                    >
+                      <span>Coin</span>
+                      <span className="co-form__totals-value">
+                        ${totals.coin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </button>
+                    <div className="co-form__totals-row co-form__totals-row--grand">
+                      <span>Total</span>
+                      <span className="co-form__totals-value">
+                        ${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                </aside>
 
-            <div className="unit-totals">
-              <div className="unit-totals__row">
-                <span>Currency total</span>
-                <strong>${totals.currency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                <div className="co-form__grid">
+                  <div className="co-form__grid-head">
+                    <span>Currency</span>
+                    <span>Amount ($)</span>
+                    <span>Multiple of</span>
+                  </div>
+                  {CHANGE_ORDER_CURRENCY_DENOMS.map((d) => (
+                    <div key={d.key} className="co-form__grid-row">
+                      <label htmlFor={`unit-${d.key}`} className="co-form__grid-label">
+                        {d.label.replace(' bills', '').replace('$', '$')}
+                      </label>
+                      <div className="co-form__grid-amount">
+                        <span className="co-form__grid-prefix">$</span>
+                        <input
+                          id={`unit-${d.key}`}
+                          className="input"
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="0.00"
+                          {...register(`units.${d.key as ChangeOrderDenomKey}` as const)}
+                        />
+                      </div>
+                      <span className="co-form__grid-multiple">
+                        ${d.unitValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="unit-totals__row">
-                <span>Coin total</span>
-                <strong>${totals.coin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-              </div>
-              <div className="unit-totals__row unit-totals__row--grand">
-                <span>Total USD</span>
-                <strong>${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-              </div>
-            </div>
-            {errors.units && (
-              <span className="field-error">{errors.units.message as string}</span>
-            )}
-
-            <div className="field">
-              <label htmlFor="comments" className="field-label">Comments</label>
-              <textarea id="comments" className="textarea" rows={2} {...register('comments')} />
-            </div>
-          </div>
+              {errors.units && (
+                <span className="field-error">{errors.units.message as string}</span>
+              )}
             </div>
           </div>
         </StepShell>
       </form>
+      <ConfirmModal
+        open={confirmOpen}
+        amount={totals.total}
+        arrivalIso={arrivalDate}
+        onYes={() => { void handleSubmit(onSubmit)(); }}
+        onNo={() => setConfirmOpen(false)}
+        submitting={submitting}
+      />
     </FormProvider>
   );
 }

@@ -1148,3 +1148,278 @@
   padding: 8px 10px 2px;
   font-weight: 700;
 }
+
+/* -----------------------------------------------------------------------
+ * 2026-08-26 change set (Amanda screenshots 5 + 3): Step 5 Cash Services
+ * portal parity refresh. Header row, compact denom grid, and Confirm modal.
+ * --------------------------------------------------------------------- */
+.co-header {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
+  gap: 16px;
+  align-items: end;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+@media (max-width: 900px) {
+  .co-header { grid-template-columns: 1fr; }
+}
+.co-header__ids {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.co-header__cell,
+.co-header__cutoff,
+.co-header__arrival {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.co-header__cutoff { align-items: stretch; text-align: center; }
+.co-header__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  font-weight: 600;
+}
+.co-header__req { color: #dc2626; }
+.co-header__input {
+  padding: 6px 10px;
+  font-size: 13px;
+  height: 32px;
+  min-height: 32px;
+}
+
+.co-form {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .co-form { grid-template-columns: 1fr; }
+}
+
+.co-form__summary { display: flex; flex-direction: column; gap: 10px; }
+.co-form__hint {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+  padding: 6px 8px;
+  background: #fef3c7;
+  border: 1px dashed #fbbf24;
+  border-radius: 6px;
+}
+.co-form__totals { border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+.co-form__totals-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f1f5f9;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+.co-form__totals-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 0;
+  border-top: 1px solid #f1f5f9;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+}
+.co-form__totals-row:hover:not(:disabled) { background: #f8fafc; }
+.co-form__totals-row--active {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+}
+.co-form__totals-row--disabled { color: #94a3b8; cursor: not-allowed; }
+.co-form__totals-row--grand {
+  background: #f8fafc;
+  border-top: 2px solid #cbd5e1;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: default;
+}
+.co-form__totals-value { text-align: right; }
+
+.co-form__grid {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  min-width: 0;
+}
+.co-form__grid-head {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f1f5f9;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+.co-form__grid-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 12px;
+  padding: 8px 12px;
+  align-items: center;
+  border-top: 1px solid #f1f5f9;
+}
+.co-form__grid-label { font-size: 13px; color: #0f172a; font-weight: 500; }
+.co-form__grid-amount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.co-form__grid-amount .input {
+  height: 32px;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.co-form__grid-prefix {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+.co-form__grid-multiple {
+  font-size: 13px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-link {
+  background: none;
+  border: 0;
+  color: #0369a1;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 14px;
+  min-height: 44px;
+}
+.btn-link:disabled { color: #94a3b8; cursor: not-allowed; text-decoration: none; }
+.btn-link:hover:not(:disabled) { color: #075985; }
+
+/* Confirm modal */
+.co-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.co-modal {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.co-modal__body {
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.5;
+  margin: 0;
+}
+.co-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* -----------------------------------------------------------------------
+ * 2026-08-26 change set: Step 4 Bank deposits parity refresh
+ *   - Top bar with customer id + user chip on the right
+ *   - Green section title
+ *   - 3-column form field grid
+ *   - Reports sidebar next to the form area (in addition to below)
+ * --------------------------------------------------------------------- */
+.cit-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+}
+.cit-topbar__customer {
+  font-size: 13px;
+  color: #334155;
+}
+.cit-topbar__customer strong { color: #0f172a; }
+.cit-topbar__user {
+  font-size: 13px;
+  color: #0369a1;
+}
+.cit-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+}
+.cit-section-title__icon {
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+}
+.cit-section-title__text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #059669;
+  flex: 1;
+}
+.cit-section-title__close {
+  font-size: 13px;
+  color: #0369a1;
+  text-decoration: none;
+}
+.cit-section-title__close:hover { text-decoration: underline; }
+
+.grid-3-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .grid-3-form { grid-template-columns: 1fr; }
+}
