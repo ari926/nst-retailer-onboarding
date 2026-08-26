@@ -587,15 +587,19 @@ export function generateHandoffPdf(ctx: HandoffContext): string {
     const rows: Array<[string, string]> = [];
     rows.push(['Arrival date', formatDate(s5.arrivalDate ?? s5.deliveryDate)]);
     if (s5.units) {
+      // 2026-08-26 (Amanda screenshot 5): units.<key> holds the DOLLAR
+      // AMOUNT requested for that denomination (must be a multiple of the
+      // strap size). Skip coin — the UI no longer collects it.
+      const CURRENCY_KEYS = new Set(['ones', 'fives', 'tens', 'twenties', 'fifties', 'hundreds']);
       let unitTotal = 0;
       for (const [key, val] of Object.entries(s5.units)) {
-        const n = Number(val) || 0;
-        if (n <= 0) continue;
-        const uv = STEP5_UNIT_VALUE[key] ?? 0;
-        unitTotal += n * uv;
+        if (!CURRENCY_KEYS.has(key)) continue;
+        const amt = Number(val) || 0;
+        if (amt <= 0) continue;
+        unitTotal += amt;
         rows.push([
-          `${STEP5_UNIT_LABEL[key] ?? key} × ${n}`,
-          formatMoney(n * uv),
+          `${STEP5_UNIT_LABEL[key] ?? key}`,
+          formatMoney(amt),
         ]);
       }
       rows.push(['Total USD', formatMoney(unitTotal)]);

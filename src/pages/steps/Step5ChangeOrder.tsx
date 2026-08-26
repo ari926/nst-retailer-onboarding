@@ -296,9 +296,29 @@ export default function Step5ChangeOrder() {
   const arrivalDate = watch('arrivalDate');
   // Force coin to 0 in the totals — the UI intentionally only collects
   // currency denominations, but old drafts / demo seed may set coin fields.
-  const units = { ones, fives, tens, twenties, fifties, hundreds, quarters: 0, dimes: 0, nickels: 0 };
+  // 2026-08-26 (Amanda screenshot 5): the 'Amount ($)' input is the total
+  // dollar amount requested for that denomination, NOT a unit count. The
+  // 'Multiple of' column enforces the strap size but is display-only. The
+  // grand total is just the sum of dollar amounts across currency rows.
   void quarters; void dimes; void nickels;
-  const totals = sumChangeOrderUsd(units);
+  const currencyTotal = ones + fives + tens + twenties + fifties + hundreds;
+  const totals = { currency: currencyTotal, coin: 0, total: currencyTotal };
+
+  // Validate multiples before opening the confirm modal.
+  const denomMultipleErrors: string[] = [];
+  const denomAmounts: Array<[string, number, number]> = [
+    ['$1 bills', ones, 100],
+    ['$5 bills', fives, 500],
+    ['$10 bills', tens, 1000],
+    ['$20 bills', twenties, 2000],
+    ['$50 bills', fifties, 5000],
+    ['$100 bills', hundreds, 10000],
+  ];
+  for (const [label, amt, mult] of denomAmounts) {
+    if (amt > 0 && amt % mult !== 0) {
+      denomMultipleErrors.push(`${label} must be a multiple of $${mult.toLocaleString()}`);
+    }
+  }
 
   const onSubmit = async (values: Step5Values) => {
     setSubmitting(true);
@@ -320,7 +340,17 @@ export default function Step5ChangeOrder() {
   // Confirm button (footer) opens the modal; the modal Yes button actually
   // submits the form via handleSubmit.
   const openConfirm = handleSubmit(
-    () => setConfirmOpen(true),
+    () => {
+      if (denomMultipleErrors.length > 0) {
+        toast.error(denomMultipleErrors[0]);
+        return;
+      }
+      if (totals.total <= 0) {
+        toast.error('Enter at least one denomination amount');
+        return;
+      }
+      setConfirmOpen(true);
+    },
     (errs) => {
       console.warn('[step submit] validation errors', errs);
       toast.error(t('common.fix_highlighted_fields', 'Please fix the highlighted fields before continuing.'));

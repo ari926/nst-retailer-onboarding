@@ -162,10 +162,12 @@ function nextWednesdayIso(): string {
 }
 void deliveryDateFiveDaysOut; // kept for reference; new demo uses Wed arrival
 
+// 2026-08-26 (Amanda screenshot 5): Amount fields hold DOLLAR AMOUNTS,
+// not unit counts. Each row is validated as a multiple of its strap size.
 const demoStep5: Step5Values = {
   arrivalDate: nextWednesdayIso(),
-  units: { ones: 1, fives: 0, tens: 0, twenties: 0, fifties: 0, hundreds: 0, quarters: 1, dimes: 0, nickels: 0 },
-  comments: 'Demo change order (1 unit of $1 bills = $100; 1 quarter unit = $500)',
+  units: { ones: 0, fives: 0, tens: 0, twenties: 0, fifties: 0, hundreds: 0, quarters: 0, dimes: 0, nickels: 0 },
+  comments: '',
 };
 
 const demoStep6: Step6Values = {
