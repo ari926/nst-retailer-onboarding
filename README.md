@@ -83,3 +83,5 @@ This repo is built incrementally across 14 PRs:
 Proprietary — © National Secure Transport.
 
 <!-- redeploy trigger: HQ-owned sample invoice (PR #26) -->
+
+<!-- chore: trigger redeploy after PR #27 merge (Cash Services Portal layout fix) -->
