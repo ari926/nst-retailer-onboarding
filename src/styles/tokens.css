@@ -112,6 +112,11 @@
   /* --- Layout --- */
   --max-content: 720px;
   --max-wide: 1080px;
+  /* 2026-08-28 (layout fix): Cash Services Portal (Step 4 Deposit) renders
+     its own nested rails (sidenav + store-info panel + 3-col form + wide
+     history table) and needs a much wider content column than a normal
+     single-field step form. Used only by .app-main__inner:has(.cit-shell). */
+  --max-deposit-wide: 1280px;
   --sidebar-width: 280px;
   --header-height: 64px;
 }

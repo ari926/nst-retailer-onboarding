@@ -122,34 +122,36 @@ function CurrencyBreakdown() {
       </button>
       {open && (
         <div className="denom-drawer__body">
-          <div className="denom-grid">
-            <div className="denom-grid__head">
-              <span>Denomination</span>
-              <span>Count</span>
-              <span>Subtotal</span>
-            </div>
-            {BILL_DENOMS.map((d) => {
-              const count = Number(values?.[d.key as BillKey]) || 0;
-              return (
-                <div key={d.key} className="denom-grid__row">
-                  <label htmlFor={`bd-${d.key}`} className="denom-grid__label">
-                    {d.label}
-                  </label>
-                  <input
-                    id={`bd-${d.key}`}
-                    className="input"
-                    type="number"
-                    min="0"
-                    step="1"
-                    {...register(`currencyBreakdown.${d.key}` as const)}
-                  />
-                  <span className="denom-grid__subtotal">${(count * d.value).toFixed(2)}</span>
-                </div>
-              );
-            })}
-            <div className="denom-grid__total">
-              <span>Breakdown total</span>
-              <strong>${breakdownTotal.toFixed(2)}</strong>
+          <div className="denom-grid__scroll">
+            <div className="denom-grid">
+              <div className="denom-grid__head">
+                <span>Denomination</span>
+                <span>Count</span>
+                <span>Subtotal</span>
+              </div>
+              {BILL_DENOMS.map((d) => {
+                const count = Number(values?.[d.key as BillKey]) || 0;
+                return (
+                  <div key={d.key} className="denom-grid__row">
+                    <label htmlFor={`bd-${d.key}`} className="denom-grid__label">
+                      {d.label}
+                    </label>
+                    <input
+                      id={`bd-${d.key}`}
+                      className="input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      {...register(`currencyBreakdown.${d.key}` as const)}
+                    />
+                    <span className="denom-grid__subtotal">${(count * d.value).toFixed(2)}</span>
+                  </div>
+                );
+              })}
+              <div className="denom-grid__total">
+                <span>Breakdown total</span>
+                <strong>${breakdownTotal.toFixed(2)}</strong>
+              </div>
             </div>
           </div>
           <div className="denom-drawer__actions">
@@ -195,34 +197,36 @@ function CoinBreakdown() {
       </button>
       {open && (
         <div className="denom-drawer__body">
-          <div className="denom-grid">
-            <div className="denom-grid__head">
-              <span>Coin</span>
-              <span>Count</span>
-              <span>Subtotal</span>
-            </div>
-            {COIN_DENOMS.map((d) => {
-              const count = Number(values?.[d.key as CoinKey]) || 0;
-              return (
-                <div key={d.key} className="denom-grid__row">
-                  <label htmlFor={`cd-${d.key}`} className="denom-grid__label">
-                    {d.label}
-                  </label>
-                  <input
-                    id={`cd-${d.key}`}
-                    className="input"
-                    type="number"
-                    min="0"
-                    step="1"
-                    {...register(`coinBreakdown.${d.key}` as const)}
-                  />
-                  <span className="denom-grid__subtotal">${(count * d.value).toFixed(2)}</span>
-                </div>
-              );
-            })}
-            <div className="denom-grid__total">
-              <span>Breakdown total</span>
-              <strong>${breakdownTotal.toFixed(2)}</strong>
+          <div className="denom-grid__scroll">
+            <div className="denom-grid">
+              <div className="denom-grid__head">
+                <span>Coin</span>
+                <span>Count</span>
+                <span>Subtotal</span>
+              </div>
+              {COIN_DENOMS.map((d) => {
+                const count = Number(values?.[d.key as CoinKey]) || 0;
+                return (
+                  <div key={d.key} className="denom-grid__row">
+                    <label htmlFor={`cd-${d.key}`} className="denom-grid__label">
+                      {d.label}
+                    </label>
+                    <input
+                      id={`cd-${d.key}`}
+                      className="input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      {...register(`coinBreakdown.${d.key}` as const)}
+                    />
+                    <span className="denom-grid__subtotal">${(count * d.value).toFixed(2)}</span>
+                  </div>
+                );
+              })}
+              <div className="denom-grid__total">
+                <span>Breakdown total</span>
+                <strong>${breakdownTotal.toFixed(2)}</strong>
+              </div>
             </div>
           </div>
           <div className="denom-drawer__actions">
@@ -601,7 +605,15 @@ export default function Step4Deposit() {
               </div>
             </div>
           </div>
+          </div>
+          </div>
 
+          {/* 2026-08-28 (layout fix): Deposit History + Reports now sit OUTSIDE
+              .cit-shell (a true sibling, not nested inside .cit-shell__body)
+              so their combined width lines up with the portal shell's full
+              outer edges (including the sidenav rail) instead of only the
+              narrower cit-layout content column. Purely a wrapper move — no
+              markup, data, or behavior inside Deposit history/Reports changed. */}
           {/* 2026-07-26 (Amanda + Doug): Deposit history + Reports rail.
               Read-only training data — mirrors the CIT screen exactly. */}
           <div className="cit-history-row">
@@ -707,8 +719,6 @@ export default function Step4Deposit() {
                 <li><a href="#" onClick={(e) => e.preventDefault()}>Deposit activity</a></li>
               </ul>
             </aside>
-          </div>
-            </div>
           </div>
         </StepShell>
       </form>

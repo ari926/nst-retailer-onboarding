@@ -491,7 +491,10 @@
 .denom-grid__row,
 .denom-grid__total {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  /* minmax(0, ...) lets each track shrink below its content's natural
+     width instead of forcing the grid (and its label/value text) to
+     overflow and visually collide when the card is narrow. */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
 }
@@ -846,6 +849,17 @@
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: color-mix(in srgb, var(--color-border, #e5e7eb) 25%, white);
+}
+
+/* Keep the denomination/coin breakdown scrollable *inside* its own card
+   instead of letting it overflow the card border when the drawer's column
+   gets narrow (e.g. mobile widths). */
+.denom-grid__scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+.denom-grid__scroll .denom-grid {
+  min-width: 320px;
 }
 .denom-drawer__actions {
   display: flex;
@@ -1419,6 +1433,21 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+/* When a currency/coin breakdown drawer is open, let its field take the
+   full form width instead of being confined to a single narrow column —
+   the breakdown rows (label + count + subtotal) need real room and
+   otherwise end up needing a horizontal scroll on every desktop width. */
+.grid-3-form > .field:has(.denom-drawer__body) {
+  grid-column: 1 / -1;
+}
+/* 2026-08-28 (layout fix): the sidenav (180px) + store-info rail (260px)
+   still eat real width even after .app-main__inner is widened, so a plain
+   single "collapse to 1 column at 900px" step left the form at an unusable
+   ~2-column-worth squeeze at common desktop widths like 1220px. Step down
+   to 2 columns first so fields keep adequate width before dropping to 1. */
+@media (max-width: 1359px) {
+  .grid-3-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
   .grid-3-form { grid-template-columns: 1fr; }

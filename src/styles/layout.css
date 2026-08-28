@@ -154,6 +154,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  width: 100%;
+  min-width: 0;
+}
+
+/* 2026-08-28 (layout fix — Cash Services Portal, Step 4 Deposit):
+   The Cash Services Portal (.cit-shell) ships its own nested sidenav +
+   store-info rail + 3-column form + wide history table, all of which need
+   far more than the standard single-column step width. Scoping the wider
+   max-width to :has(.cit-shell) keeps every other (simpler) onboarding step
+   at the original 780px reading width — only the Deposit step's portal,
+   its Deposit History, and its Reports section (all rendered inside this
+   same .cit-shell subtree) get the wide column, and they automatically
+   share one aligned width/left-right edge because they share this parent. */
+.app-main__inner:has(.cit-shell) {
+  max-width: var(--max-deposit-wide);
 }
 
 /* ----------------------------- STEP LIST ----------------------------- */
