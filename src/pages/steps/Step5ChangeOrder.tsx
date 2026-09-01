@@ -296,29 +296,17 @@ export default function Step5ChangeOrder() {
   const arrivalDate = watch('arrivalDate');
   // Force coin to 0 in the totals — the UI intentionally only collects
   // currency denominations, but old drafts / demo seed may set coin fields.
-  // 2026-08-26 (Amanda screenshot 5): the 'Amount ($)' input is the total
-  // dollar amount requested for that denomination, NOT a unit count. The
-  // 'Multiple of' column enforces the strap size but is display-only. The
-  // grand total is just the sum of dollar amounts across currency rows.
+  // 2026-09-01 (Amanda): the 'Units' input is a COUNT of straps/bills for
+  // that denomination — e.g. entering "1" on the $100 row means one $100
+  // strap. The grand total multiplies each row's count by its denomination
+  // value (the 'Multiple of' column) and sums across currency rows. This
+  // matches the Deposit step's Count × Value model and fixes totals that
+  // previously summed raw entered numbers instead of dollar values.
   void quarters; void dimes; void nickels;
-  const currencyTotal = ones + fives + tens + twenties + fifties + hundreds;
-  const totals = { currency: currencyTotal, coin: 0, total: currencyTotal };
-
-  // Validate multiples before opening the confirm modal.
-  const denomMultipleErrors: string[] = [];
-  const denomAmounts: Array<[string, number, number]> = [
-    ['$1 bills', ones, 100],
-    ['$5 bills', fives, 500],
-    ['$10 bills', tens, 1000],
-    ['$20 bills', twenties, 2000],
-    ['$50 bills', fifties, 5000],
-    ['$100 bills', hundreds, 10000],
-  ];
-  for (const [label, amt, mult] of denomAmounts) {
-    if (amt > 0 && amt % mult !== 0) {
-      denomMultipleErrors.push(`${label} must be a multiple of $${mult.toLocaleString()}`);
-    }
-  }
+  const totals = sumChangeOrderUsd({
+    ones, fives, tens, twenties, fifties, hundreds,
+    quarters: 0, dimes: 0, nickels: 0,
+  });
 
   const onSubmit = async (values: Step5Values) => {
     setSubmitting(true);
@@ -341,10 +329,6 @@ export default function Step5ChangeOrder() {
   // submits the form via handleSubmit.
   const openConfirm = handleSubmit(
     () => {
-      if (denomMultipleErrors.length > 0) {
-        toast.error(denomMultipleErrors[0]);
-        return;
-      }
       if (totals.total <= 0) {
         toast.error('Enter at least one denomination amount');
         return;
@@ -478,8 +462,8 @@ export default function Step5ChangeOrder() {
                 <div className="co-form__grid">
                   <div className="co-form__grid-head">
                     <span>Currency</span>
-                    <span>Amount ($)</span>
-                    <span>Multiple of</span>
+                    <span>Units</span>
+                    <span>Value each</span>
                   </div>
                   {CHANGE_ORDER_CURRENCY_DENOMS.map((d) => (
                     <div key={d.key} className="co-form__grid-row">
@@ -487,14 +471,13 @@ export default function Step5ChangeOrder() {
                         {d.label.replace(' bills', '').replace('$', '$')}
                       </label>
                       <div className="co-form__grid-amount">
-                        <span className="co-form__grid-prefix">$</span>
                         <input
                           id={`unit-${d.key}`}
                           className="input"
                           type="number"
                           min="0"
                           step="1"
-                          placeholder="0.00"
+                          placeholder="0"
                           {...register(`units.${d.key as ChangeOrderDenomKey}` as const)}
                         />
                       </div>
