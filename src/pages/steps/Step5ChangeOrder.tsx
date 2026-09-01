@@ -44,10 +44,15 @@ interface HeaderInfo {
   location: string;
 }
 
-// Denominations shown in the change-order form. Coin rows are intentionally
-// excluded to match the real production Cash Services form (Amanda 2026-08-26).
+// Currency (bill) rows shown when the "Currency" product is selected.
 const CHANGE_ORDER_CURRENCY_DENOMS = CHANGE_ORDER_DENOMS.filter(
   (d) => !['quarters', 'dimes', 'nickels'].includes(d.key),
+);
+
+// Coin rows shown when the "Coin" product is selected.
+// 2026-09-01 (Amanda): coin ordering enabled on this screen.
+const CHANGE_ORDER_COIN_DENOMS = CHANGE_ORDER_DENOMS.filter(
+  (d) => ['quarters', 'dimes', 'nickels'].includes(d.key),
 );
 
 function SimulationBanner({ customer }: { customer: string }) {
@@ -193,10 +198,10 @@ export default function Step5ChangeOrder() {
   // 2026-08-26 (Amanda screenshot 3): production form asks "Please confirm..."
   // before actually submitting the change order.
   const [confirmOpen, setConfirmOpen] = useState(false);
-  // Which product row is active in the left summary panel. Matches the ref
-  // screenshot where clicking "Currency" highlights the currency section.
+  // Which product row is active in the left summary panel. Clicking
+  // "Currency" or "Coin" switches which denomination rows the right-hand
+  // grid shows (2026-09-01: Coin is now selectable, not disabled).
   const [activeProduct, setActiveProduct] = useState<'currency' | 'coin'>('currency');
-  void activeProduct; // kept for future use; coin section is disabled in the ref
 
   const arrivalOptions = useMemo(() => nextArrivalDates(new Date(), 3), []);
 
@@ -294,18 +299,16 @@ export default function Step5ChangeOrder() {
   const dimes = Number(watch('units.dimes')) || 0;
   const nickels = Number(watch('units.nickels')) || 0;
   const arrivalDate = watch('arrivalDate');
-  // Force coin to 0 in the totals — the UI intentionally only collects
-  // currency denominations, but old drafts / demo seed may set coin fields.
-  // 2026-09-01 (Amanda): the 'Units' input is a COUNT of straps/bills for
+  // 2026-09-01 (Amanda): the 'Units' input is a COUNT of straps/boxes for
   // that denomination — e.g. entering "1" on the $100 row means one $100
-  // strap. The grand total multiplies each row's count by its denomination
-  // value (the 'Multiple of' column) and sums across currency rows. This
-  // matches the Deposit step's Count × Value model and fixes totals that
-  // previously summed raw entered numbers instead of dollar values.
-  void quarters; void dimes; void nickels;
+  // strap, and "1" on the Quarters row means one $500 box of quarters. The
+  // grand total multiplies each row's count by its denomination value (the
+  // 'Value each' column) and sums across both currency and coin rows.
+  // Coin ordering is now enabled on this screen (previously hard-coded to
+  // 0 while coin rows were hidden).
   const totals = sumChangeOrderUsd({
     ones, fives, tens, twenties, fifties, hundreds,
-    quarters: 0, dimes: 0, nickels: 0,
+    quarters, dimes, nickels,
   });
 
   const onSubmit = async (values: Step5Values) => {
@@ -441,9 +444,8 @@ export default function Step5ChangeOrder() {
                     </button>
                     <button
                       type="button"
-                      className="co-form__totals-row co-form__totals-row--disabled"
-                      disabled
-                      aria-disabled="true"
+                      className={`co-form__totals-row ${activeProduct === 'coin' ? 'co-form__totals-row--active' : ''}`}
+                      onClick={() => setActiveProduct('coin')}
                     >
                       <span>Coin</span>
                       <span className="co-form__totals-value">
@@ -461,11 +463,11 @@ export default function Step5ChangeOrder() {
 
                 <div className="co-form__grid">
                   <div className="co-form__grid-head">
-                    <span>Currency</span>
+                    <span>{activeProduct === 'coin' ? 'Coin' : 'Currency'}</span>
                     <span>Units</span>
                     <span>Value each</span>
                   </div>
-                  {CHANGE_ORDER_CURRENCY_DENOMS.map((d) => (
+                  {(activeProduct === 'coin' ? CHANGE_ORDER_COIN_DENOMS : CHANGE_ORDER_CURRENCY_DENOMS).map((d) => (
                     <div key={d.key} className="co-form__grid-row">
                       <label htmlFor={`unit-${d.key}`} className="co-form__grid-label">
                         {d.label.replace(' bills', '').replace('$', '$')}
