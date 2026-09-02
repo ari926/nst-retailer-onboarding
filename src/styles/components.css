@@ -1287,9 +1287,9 @@
 }
 .co-form__grid-head {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr;
-  gap: 12px;
-  padding: 8px 12px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(68px, 0.95fr);
+  gap: 8px;
+  padding: 8px 10px;
   background: #f1f5f9;
   font-size: 11px;
   color: #64748b;
@@ -1299,19 +1299,22 @@
 }
 .co-form__grid-row {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr;
-  gap: 12px;
-  padding: 8px 12px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(68px, 0.95fr);
+  gap: 8px;
+  padding: 8px 10px;
   align-items: center;
   border-top: 1px solid #f1f5f9;
 }
-.co-form__grid-label { font-size: 13px; color: #0f172a; font-weight: 500; }
+.co-form__grid-label { font-size: 13px; color: #0f172a; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .co-form__grid-amount {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
 }
 .co-form__grid-amount .input {
+  width: 100%;
+  min-width: 0;
   height: 32px;
   min-height: 32px;
   padding: 6px 8px;
@@ -1328,6 +1331,9 @@
   font-size: 13px;
   color: #64748b;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn-link {
