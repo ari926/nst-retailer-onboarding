@@ -172,10 +172,6 @@ function ConfirmModal({
           Please confirm that you would like to place an order for <strong>{amountFmt}</strong> to arrive on{' '}
           <strong>{arrival}</strong>. The order total is <strong>{amountFmt}</strong>.
         </p>
-        <p className="co-modal__note">
-          Once confirmed, a receipt PDF is generated with two tear-off portions: keep the <strong>top portion</strong> for
-          your records, and place the <strong>bottom portion</strong> inside the tamper-evident bag along with the deposit.
-        </p>
         <div className="co-modal__actions">
           <button type="button" className="btn btn-primary" onClick={onYes} disabled={submitting}>
             {submitting ? <span className="spinner" aria-hidden /> : 'Yes'}
