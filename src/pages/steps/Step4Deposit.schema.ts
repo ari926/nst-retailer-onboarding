@@ -110,6 +110,10 @@ export const step4Schema = z
     }).partial().optional(),
   })
   .superRefine((v, ctx) => {
+    // 2026-09-02 (Amanda): totals now auto-sync live from an open breakdown
+    // (see Step4Deposit.tsx), so a mismatch between the two can no longer
+    // happen in the UI — the only remaining rule is that something was
+    // entered, whether as a plain total or via denomination breakdown.
     const grandTotal = (v.totalCurrency ?? 0) + (v.totalCoin ?? 0);
     if (grandTotal <= 0) {
       ctx.addIssue({
@@ -117,35 +121,6 @@ export const step4Schema = z
         path: ['totalCurrency'],
         message: 'Enter a total for currency, coin, or both.',
       });
-    }
-
-    // If retailer opened the currency breakdown, its sum must equal totalCurrency.
-    if (v.useCurrencyBreakdown) {
-      const breakdownTotal = BILL_DENOMS.reduce(
-        (sum, d) => sum + (v.currencyBreakdown[d.key] ?? 0) * d.value,
-        0,
-      );
-      if (breakdownTotal > 0 && Math.abs(breakdownTotal - v.totalCurrency) > 0.005) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['totalCurrency'],
-          message: `Currency breakdown adds up to $${breakdownTotal.toFixed(2)} but total currency is $${v.totalCurrency.toFixed(2)}. Fix one.`,
-        });
-      }
-    }
-
-    if (v.useCoinBreakdown) {
-      const coinTotal = COIN_DENOMS.reduce(
-        (sum, d) => sum + (v.coinBreakdown[d.key] ?? 0) * d.value,
-        0,
-      );
-      if (coinTotal > 0 && Math.abs(coinTotal - v.totalCoin) > 0.005) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['totalCoin'],
-          message: `Coin breakdown adds up to $${coinTotal.toFixed(2)} but total coin is $${v.totalCoin.toFixed(2)}. Fix one.`,
-        });
-      }
     }
   });
 
