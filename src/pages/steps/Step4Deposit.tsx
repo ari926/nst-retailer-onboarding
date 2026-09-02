@@ -50,6 +50,37 @@ interface StoreInfo {
   pickupSchedule: string;
 }
 
+// 2026-09-02 (Amanda): brief acknowledgment shown right after a deposit is
+// confirmed, explaining the physical tear-off receipt hand-off. Mirrors the
+// Step 5 change-order confirm modal's visual style.
+function DepositDoneModal({
+  open,
+  onContinue,
+}: {
+  open: boolean;
+  onContinue: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="co-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="deposit-done-title">
+      <div className="co-modal">
+        <p id="deposit-done-title" className="co-modal__body">
+          Deposit confirmed.
+        </p>
+        <p className="cit-modal__note">
+          A receipt PDF is generated with two tear-off portions: keep the <strong>top portion</strong> for your records,
+          and place the <strong>bottom portion</strong> inside the tamper-evident bag along with the deposit.
+        </p>
+        <div className="co-modal__actions">
+          <button type="button" className="btn btn-primary" onClick={onContinue}>
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SimulationBanner({ customer }: { customer: string }) {
   return (
     <div className="sim-banner" role="status" aria-live="polite">
@@ -259,6 +290,10 @@ export default function Step4Deposit() {
 
   const [submitting, setSubmitting] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  // 2026-09-02 (Amanda): after a real deposit is confirmed on the production
+  // CIT portal, a receipt is generated with two tear-off portions. Shown as a
+  // brief acknowledgment once the deposit completes, before moving on.
+  const [depositDoneOpen, setDepositDoneOpen] = useState(false);
 
   // Sourced from Step 1 draft (address) and Step 7 draft (pickup schedule) if
   // they exist. Best-effort fill; the panel gracefully degrades to "—".
@@ -386,15 +421,21 @@ export default function Step4Deposit() {
     try {
       await submitStep(4, values);
       markStepCompleted(4);
-      setCurrentStep(5);
       toast.success(t('step_4_deposit.success', 'Sample deposit completed.'));
-      navigate('/onboarding/change-order');
+      // Show the tear-off receipt note before moving on to Step 5.
+      setDepositDoneOpen(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('global.errors.generic');
       toast.error(msg);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const continueToChangeOrder = () => {
+    setDepositDoneOpen(false);
+    setCurrentStep(5);
+    navigate('/onboarding/change-order');
   };
 
   return (
@@ -722,6 +763,7 @@ export default function Step4Deposit() {
           </div>
         </StepShell>
       </form>
+      <DepositDoneModal open={depositDoneOpen} onContinue={continueToChangeOrder} />
     </FormProvider>
   );
 }
