@@ -139,6 +139,15 @@ function CurrencyBreakdown() {
     0,
   );
 
+  // 2026-09-02 (Amanda): when entering by denomination, the total should
+  // total itself automatically — no separate "copy into total" step, and
+  // no possibility of the two disagreeing.
+  useEffect(() => {
+    if (open) {
+      setValue('totalCurrency', Number(breakdownTotal.toFixed(2)), { shouldDirty: true });
+    }
+  }, [open, breakdownTotal, setValue]);
+
   return (
     <div className="denom-drawer">
       <button
@@ -185,17 +194,9 @@ function CurrencyBreakdown() {
               </div>
             </div>
           </div>
-          <div className="denom-drawer__actions">
-            <button
-              type="button"
-              className="btn-ghost btn-ghost--sm"
-              onClick={() => {
-                setValue('totalCurrency', Number(breakdownTotal.toFixed(2)), { shouldDirty: true });
-              }}
-            >
-              Copy breakdown into total
-            </button>
-          </div>
+          <p className="denom-drawer__hint denom-drawer__hint--sync">
+            Total currency above updates automatically from this breakdown.
+          </p>
         </div>
       )}
       {errors.totalCurrency && (
@@ -213,6 +214,14 @@ function CoinBreakdown() {
     (sum, d) => sum + (Number(values?.[d.key as CoinKey]) || 0) * d.value,
     0,
   );
+
+  // 2026-09-02 (Amanda): same auto-totaling as currency — the total updates
+  // itself from the coin breakdown, no manual copy step.
+  useEffect(() => {
+    if (open) {
+      setValue('totalCoin', Number(breakdownTotal.toFixed(2)), { shouldDirty: true });
+    }
+  }, [open, breakdownTotal, setValue]);
 
   return (
     <div className="denom-drawer">
@@ -260,17 +269,9 @@ function CoinBreakdown() {
               </div>
             </div>
           </div>
-          <div className="denom-drawer__actions">
-            <button
-              type="button"
-              className="btn-ghost btn-ghost--sm"
-              onClick={() => {
-                setValue('totalCoin', Number(breakdownTotal.toFixed(2)), { shouldDirty: true });
-              }}
-            >
-              Copy breakdown into total
-            </button>
-          </div>
+          <p className="denom-drawer__hint denom-drawer__hint--sync">
+            Total coin above updates automatically from this breakdown.
+          </p>
         </div>
       )}
       {errors.totalCoin && (
@@ -400,6 +401,8 @@ export default function Step4Deposit() {
   const totalCurrency = Number(watch('totalCurrency')) || 0;
   const totalCoin = Number(watch('totalCoin')) || 0;
   const totalDeposit = totalCurrency + totalCoin;
+  const useCurrencyBreakdown = watch('useCurrencyBreakdown');
+  const useCoinBreakdown = watch('useCoinBreakdown');
 
   const expectedCreditDate = useMemo(() => computeExpectedCreditDate(businessDate), [businessDate]);
 
@@ -550,13 +553,17 @@ export default function Step4Deposit() {
                     <input id="preparedBy" className="input" {...register('preparedBy')} />
                   </div>
                   <div className="field">
-                    <label htmlFor="totalCurrency" className="field-label">Total currency ($)</label>
+                    <label htmlFor="totalCurrency" className="field-label">
+                      Total currency ($)
+                      {useCurrencyBreakdown && <span className="field-label__hint"> · auto-totaled</span>}
+                    </label>
                     <input
                       id="totalCurrency"
                       className="input"
                       type="number"
                       step="0.01"
                       min="0"
+                      readOnly={useCurrencyBreakdown}
                       {...register('totalCurrency')}
                     />
                     <CurrencyBreakdown />
@@ -576,13 +583,17 @@ export default function Step4Deposit() {
                     <input id="verifiedBy" className="input" {...register('verifiedBy')} />
                   </div>
                   <div className="field">
-                    <label htmlFor="totalCoin" className="field-label">Total coin ($)</label>
+                    <label htmlFor="totalCoin" className="field-label">
+                      Total coin ($)
+                      {useCoinBreakdown && <span className="field-label__hint"> · auto-totaled</span>}
+                    </label>
                     <input
                       id="totalCoin"
                       className="input"
                       type="number"
                       step="0.01"
                       min="0"
+                      readOnly={useCoinBreakdown}
                       {...register('totalCoin')}
                     />
                     <CoinBreakdown />

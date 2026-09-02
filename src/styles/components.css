@@ -867,6 +867,26 @@
   margin-top: 8px;
 }
 
+/* 2026-09-02 (Amanda): denomination breakdown now auto-totals into the
+ * plain total field above it — no manual "copy into total" step. */
+.denom-drawer__hint--sync {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+.field-label__hint {
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 400;
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: normal;
+}
+input[readonly].input {
+  background: color-mix(in srgb, var(--color-border, #e5e7eb) 35%, white);
+  color: var(--color-text-muted, #6b7280);
+  cursor: default;
+}
+
 /* Cash Services header bar (customer id / name / location / cutoff / arrival) */
 .change-order-header {
   padding: 12px 16px;
