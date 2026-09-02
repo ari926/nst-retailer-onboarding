@@ -158,7 +158,7 @@ function CurrencyBreakdown() {
       >
         {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         <span>Input details…</span>
-        <span className="denom-drawer__hint">Optional — enter counts by denomination</span>
+        <span className="denom-drawer__hint">Optional — break bills out by denomination instead</span>
       </button>
       {open && (
         <div className="denom-drawer__body">
@@ -195,7 +195,7 @@ function CurrencyBreakdown() {
             </div>
           </div>
           <p className="denom-drawer__hint denom-drawer__hint--sync">
-            Total currency above updates automatically from this breakdown.
+            Total bills above updates automatically from this breakdown.
           </p>
         </div>
       )}
@@ -233,7 +233,7 @@ function CoinBreakdown() {
       >
         {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         <span>Input details…</span>
-        <span className="denom-drawer__hint">Optional — enter counts by coin</span>
+        <span className="denom-drawer__hint">Optional — break coins out by denomination instead</span>
       </button>
       {open && (
         <div className="denom-drawer__body">
@@ -270,7 +270,7 @@ function CoinBreakdown() {
             </div>
           </div>
           <p className="denom-drawer__hint denom-drawer__hint--sync">
-            Total coin above updates automatically from this breakdown.
+            Total coins above updates automatically from this breakdown.
           </p>
         </div>
       )}
@@ -554,9 +554,10 @@ export default function Step4Deposit() {
                   </div>
                   <div className="field">
                     <label htmlFor="totalCurrency" className="field-label">
-                      Total currency ($)
+                      Total bills ($)
                       {useCurrencyBreakdown && <span className="field-label__hint"> · auto-totaled</span>}
                     </label>
+                    <p className="field-hint">Enter one total, or break bills out by denomination below.</p>
                     <input
                       id="totalCurrency"
                       className="input"
@@ -584,9 +585,10 @@ export default function Step4Deposit() {
                   </div>
                   <div className="field">
                     <label htmlFor="totalCoin" className="field-label">
-                      Total coin ($)
+                      Total coins ($)
                       {useCoinBreakdown && <span className="field-label__hint"> · auto-totaled</span>}
                     </label>
+                    <p className="field-hint">Enter one total, or break coins out by denomination below.</p>
                     <input
                       id="totalCoin"
                       className="input"
