@@ -166,8 +166,16 @@
    at the original 780px reading width — only the Deposit step's portal,
    its Deposit History, and its Reports section (all rendered inside this
    same .cit-shell subtree) get the wide column, and they automatically
-   share one aligned width/left-right edge because they share this parent. */
-.app-main__inner:has(.cit-shell) {
+   share one aligned width/left-right edge because they share this parent.
+
+   2026-09-02 (layout fix — Cash Services Portal, Step 5 Change Order):
+   .cash-shell is the Step 5 sibling of .cit-shell (same sidenav + form
+   shape, same Cash Services Portal) and needs the identical extra width —
+   its 3-column currency/units/value-each grid was clipping at narrower
+   desktop widths under the 780px cap. Added to the same selector so both
+   Cash Services steps share one aligned wide column. */
+.app-main__inner:has(.cit-shell),
+.app-main__inner:has(.cash-shell) {
   max-width: var(--max-deposit-wide);
 }
 
