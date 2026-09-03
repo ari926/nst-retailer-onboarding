@@ -1355,6 +1355,13 @@ input[readonly].input {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.co-form__grid-row-wrap { display: flex; flex-direction: column; }
+.co-form__grid-row-wrap .co-form__grid-row { border-top: 1px solid #f1f5f9; }
+.co-form__grid-row-wrap:first-child .co-form__grid-row { border-top: 0; }
+.co-form__grid-row-error {
+  padding: 0 10px 8px 10px;
+  font-size: 12px;
+}
 
 .btn-link {
   background: none;

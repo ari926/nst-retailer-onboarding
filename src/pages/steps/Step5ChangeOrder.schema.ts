@@ -10,8 +10,11 @@ import { z } from 'zod';
  * Header fields:
  *   Customer id, Name, Location, Cutoff time, Arrival date (dropdown).
  *
- * Denomination entry grid — the retailer requests whole "units" per row.
- * Units are NOT subdivided (a $20-bill unit is one $2,000 strap).
+ * 2026-09-03 (Amanda screenshot): denomination entry grid matches the real
+ * Cash Services screen exactly — the retailer types a dollar Amount ($)
+ * directly per row (NOT a count of straps/boxes), and that Amount must be a
+ * multiple of the printed "Multiple of" value (the face value of one strap
+ * or coin box for that denomination, e.g. $1 bills ship in $100 straps).
  */
 
 // Amanda-provided unit definitions. `unitValue` = dollars per unit.
@@ -98,19 +101,41 @@ export function formatArrivalLabel(iso: string): string {
   });
 }
 
-// Zod: each denom is a non-negative integer count of units.
+// Zod: each denom is a non-negative whole-dollar Amount, which must be a
+// multiple of that denomination's strap/box face value (see CHANGE_ORDER_DENOMS
+// unitValue, displayed to the retailer as "Multiple of").
 // 2026-07-26 change set: fifties + hundreds added to the count shape.
-const denomCounts = z.object({
-  ones: z.coerce.number().int().min(0),
-  fives: z.coerce.number().int().min(0),
-  tens: z.coerce.number().int().min(0),
-  twenties: z.coerce.number().int().min(0),
-  fifties: z.coerce.number().int().min(0),
-  hundreds: z.coerce.number().int().min(0),
-  quarters: z.coerce.number().int().min(0),
-  dimes: z.coerce.number().int().min(0),
-  nickels: z.coerce.number().int().min(0),
-});
+// 2026-09-03 (Amanda screenshot): fields now hold a dollar Amount, not a
+// straps/boxes count — superRefine below enforces the multiple-of rule.
+const DENOM_MULTIPLE: Record<ChangeOrderDenomKey, number> = Object.fromEntries(
+  CHANGE_ORDER_DENOMS.map((d) => [d.key, d.unitValue]),
+) as Record<ChangeOrderDenomKey, number>;
+
+const denomCounts = z
+  .object({
+    ones: z.coerce.number().int().min(0),
+    fives: z.coerce.number().int().min(0),
+    tens: z.coerce.number().int().min(0),
+    twenties: z.coerce.number().int().min(0),
+    fifties: z.coerce.number().int().min(0),
+    hundreds: z.coerce.number().int().min(0),
+    quarters: z.coerce.number().int().min(0),
+    dimes: z.coerce.number().int().min(0),
+    nickels: z.coerce.number().int().min(0),
+  })
+  .superRefine((v, ctx) => {
+    (Object.keys(v) as ChangeOrderDenomKey[]).forEach((key) => {
+      const amount = v[key];
+      const multiple = DENOM_MULTIPLE[key];
+      if (amount > 0 && multiple > 0 && amount % multiple !== 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `Must be a multiple of $${multiple.toLocaleString()}`,
+        });
+      }
+    });
+  });
 
 export const step5Schema = z
   .object({
@@ -162,7 +187,11 @@ export const step5Defaults: Step5Values = {
   comments: '',
 };
 
-/** Sum total USD across all requested units. */
+/**
+ * Sum total USD across all requested denominations.
+ * 2026-09-03: rows now hold a dollar Amount directly, so this is a plain
+ * sum — no more count × unitValue multiplication.
+ */
 export function sumChangeOrderUsd(units: Step5Values['units']): {
   currency: number;
   coin: number;
@@ -170,9 +199,7 @@ export function sumChangeOrderUsd(units: Step5Values['units']): {
 } {
   const currencyKeys: ChangeOrderDenomKey[] = ['ones', 'fives', 'tens', 'twenties', 'fifties', 'hundreds'];
   const coinKeys: ChangeOrderDenomKey[] = ['quarters', 'dimes', 'nickels'];
-  const findUnit = (k: ChangeOrderDenomKey) =>
-    CHANGE_ORDER_DENOMS.find((d) => d.key === k)?.unitValue ?? 0;
-  const currency = currencyKeys.reduce((sum, k) => sum + (Number(units[k]) || 0) * findUnit(k), 0);
-  const coin = coinKeys.reduce((sum, k) => sum + (Number(units[k]) || 0) * findUnit(k), 0);
+  const currency = currencyKeys.reduce((sum, k) => sum + (Number(units[k]) || 0), 0);
+  const coin = coinKeys.reduce((sum, k) => sum + (Number(units[k]) || 0), 0);
   return { currency, coin, total: currency + coin };
 }
