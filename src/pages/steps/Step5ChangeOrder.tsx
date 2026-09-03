@@ -36,6 +36,12 @@ import {
  *   - Footer: Confirm (blue) + Cancel (text link).
  *   - Confirm click opens the "Please confirm that you would like to place an
  *     order..." modal with Yes/No. Only Yes submits.
+ *
+ * 2026-09-03 (Amanda screenshot): the Amount ($) column is a direct dollar
+ * entry per denomination (not a straps/boxes count) and must be a multiple
+ * of the printed "Multiple of" value. The confirm modal also now tells the
+ * retailer a printable order confirmation will be generated once they
+ * complete the order (matching the real post-submit confirmation screen).
  */
 
 interface HeaderInfo {
@@ -171,6 +177,10 @@ function ConfirmModal({
         <p id="co-modal-title" className="co-modal__body">
           Please confirm that you would like to place an order for <strong>{amountFmt}</strong> to arrive on{' '}
           <strong>{arrival}</strong>. The order total is <strong>{amountFmt}</strong>.
+        </p>
+        <p className="cit-modal__note">
+          Once confirmed, we'll generate a printable order confirmation with your confirmation number, order
+          amount, and arrival date — keep it for your records.
         </p>
         <div className="co-modal__actions">
           <button type="button" className="btn btn-primary" onClick={onYes} disabled={submitting}>
@@ -464,30 +474,38 @@ export default function Step5ChangeOrder() {
                 <div className="co-form__grid">
                   <div className="co-form__grid-head">
                     <span>{activeProduct === 'coin' ? 'Coin' : 'Currency'}</span>
-                    <span>Units</span>
-                    <span>Value each</span>
+                    <span>Amount ($)</span>
+                    <span>Multiple of</span>
                   </div>
-                  {(activeProduct === 'coin' ? CHANGE_ORDER_COIN_DENOMS : CHANGE_ORDER_CURRENCY_DENOMS).map((d) => (
-                    <div key={d.key} className="co-form__grid-row">
-                      <label htmlFor={`unit-${d.key}`} className="co-form__grid-label">
-                        {d.label.replace(' bills', '').replace('$', '$')}
-                      </label>
-                      <div className="co-form__grid-amount">
-                        <input
-                          id={`unit-${d.key}`}
-                          className="input"
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder="0"
-                          {...register(`units.${d.key as ChangeOrderDenomKey}` as const)}
-                        />
+                  {(activeProduct === 'coin' ? CHANGE_ORDER_COIN_DENOMS : CHANGE_ORDER_CURRENCY_DENOMS).map((d) => {
+                    const rowError = (errors.units as Record<string, { message?: string }> | undefined)?.[d.key]?.message;
+                    return (
+                      <div key={d.key} className="co-form__grid-row-wrap">
+                        <div className="co-form__grid-row">
+                          <label htmlFor={`unit-${d.key}`} className="co-form__grid-label">
+                            {d.label.replace(' bills', '').replace('$', '$')}
+                          </label>
+                          <div className="co-form__grid-amount">
+                            <span className="co-form__grid-prefix">$</span>
+                            <input
+                              id={`unit-${d.key}`}
+                              className="input"
+                              type="number"
+                              min="0"
+                              step="1"
+                              placeholder="0.00"
+                              aria-invalid={rowError ? true : undefined}
+                              {...register(`units.${d.key as ChangeOrderDenomKey}` as const)}
+                            />
+                          </div>
+                          <span className="co-form__grid-multiple">
+                            ${d.unitValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        {rowError && <span className="field-error co-form__grid-row-error">{rowError}</span>}
                       </div>
-                      <span className="co-form__grid-multiple">
-                        ${d.unitValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               {errors.units && (
