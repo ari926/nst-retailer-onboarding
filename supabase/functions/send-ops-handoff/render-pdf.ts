@@ -246,16 +246,31 @@ function drawHeader(
   return headerBottom + 14; // start of body
 }
 
-/** Draw a section header. Returns next y. */
-function drawSectionHeader(doc: any, title: string, y: number): number {
+/**
+ * Draw a section header. Returns next y.
+ *
+ * `x`/`w` default to the full content width (MARGIN_X..PAGE_W-MARGIN_X) for
+ * ordinary single-column sections. When two section headers are drawn
+ * side-by-side at the same y (e.g. "3 · Banking" | "6 · Invoicing contact"),
+ * each call MUST pass its own column's x/w — otherwise both titles and both
+ * underlines land on the same full-width span and overlap illegibly.
+ */
+function drawSectionHeader(
+  doc: any,
+  title: string,
+  y: number,
+  x: number = MARGIN_X,
+  w: number = CONTENT_W,
+): number {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(NST_INK);
-  doc.text(title.toUpperCase(), MARGIN_X, y);
-  // Teal underline across full content width
+  doc.text(title.toUpperCase(), x, y);
+  // Teal underline across this header's own width only (full content width
+  // for single-column sections; one column's width when side-by-side).
   doc.setDrawColor(NST_TEAL);
   doc.setLineWidth(1.0);
-  doc.line(MARGIN_X, y + 3, PAGE_W - MARGIN_X, y + 3);
+  doc.line(x, y + 3, x + w, y + 3);
   return y + 13;
 }
 
@@ -538,8 +553,9 @@ export function renderHandoffPdf(
   const showS6 = !!(s6 && (s6.contactName?.trim() || s6.contactEmail?.trim()));
 
   if (showS6) {
-    // Left: Banking
-    let yL = drawSectionHeader(doc, '3 · Banking', y);
+    // Left: Banking — constrained to the left column's own width so its
+    // header/underline don't collide with the Invoicing header on the right.
+    let yL = drawSectionHeader(doc, '3 · Banking', y, MARGIN_X, COL_W);
     yL = drawKvCol(
       doc,
       s3
@@ -556,8 +572,9 @@ export function renderHandoffPdf(
       72,
     );
 
-    // Right: Invoicing
-    let yR = drawSectionHeader(doc, '6 · Invoicing contact', y);
+    // Right: Invoicing — starts at the same x offset used for the row data
+    // below (MARGIN_X + COL_W + COL_GAP) so header and rows line up.
+    let yR = drawSectionHeader(doc, '6 · Invoicing contact', y, MARGIN_X + COL_W + COL_GAP, COL_W);
     const s6Rows: Array<[string, string]> = [];
     if (s6!.contactName?.trim()) s6Rows.push(['Name', s6!.contactName!.trim()]);
     if (s6!.contactEmail?.trim()) s6Rows.push(['Email', s6!.contactEmail!.trim()]);
