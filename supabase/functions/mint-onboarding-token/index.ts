@@ -127,6 +127,20 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
+  // Retire expired links first. Without this, an expired token blocks the
+  // partial-unique index and gets handed back as "reused", so HQ receives a
+  // dead link. Revoking it lets us mint a fresh one below.
+  const { error: expireErr } = await supabase
+    .from('onboarding_tokens')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('sfdc_opportunity_id', opportunityId)
+    .eq('source', source)
+    .is('revoked_at', null)
+    .lt('expires_at', new Date().toISOString());
+  if (expireErr) {
+    console.warn('[mint-onboarding-token] expire-old failed', expireErr.message);
+  }
+
   if (source === 'intro_email') {
     const { data: existing } = await lookupExisting();
 
